@@ -1,6 +1,8 @@
 #include "algo.hpp"
 #include <algorithm>
 #include <chrono>
+#include <fstream>
+#include <string>
 
 void Algo::initialize_stations()
 {
@@ -206,34 +208,66 @@ void Algo::print_performance_analysis()
     std::cout << "rather than searching for a specific value in a sorted array." << std::endl;
 }
 
-void Algo::benchmark_find_faulty_station_binary(int iterations)
+void Algo::benchmark_find_faulty_station_binary(std::string file_Path, int iterations)
 {
     using namespace std::chrono;
 
-    //return if stations container is empty.
+    // First load the stations from file
+    initialize_stations_from_file(file_Path);
+    
+    // Now check if stations were actually loaded
     if (stations.empty()) {
-            std::cout << "No stations available for benchmarking." << std::endl;
-            return;
-        }
+        std::cout << "No stations available for benchmarking. File: " << file_Path << std::endl;
+        return;
+    }
 
     nanoseconds total_time(0);
-        for (int t = 0; t < iterations; ++t) {
-        initialize_stations();       // reset all to not faulty
-        random_faulty_station();    // mark one as faulty
+    
+    for (int t = 0; t < iterations; ++t) {
+        // Reset all stations to not faulty for this iteration
+        reset();  // You'll need to implement this
+        
+        // Mark one random station as faulty
+        random_faulty_station();
 
-        auto start = std::chrono::high_resolution_clock::now();
+        auto start = high_resolution_clock::now();
         find_faulty_station_binary();
-        auto end = std::chrono::high_resolution_clock::now();
+        auto end = high_resolution_clock::now();
 
-        total_time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+        total_time += duration_cast<nanoseconds>(end - start);
     }
-    //bench mark and print out the stats.
+
+    // Benchmark and print out the stats
     double avg_ns = static_cast<double>(total_time.count()) / iterations;
 
-    std::cout << "Benchmark results over " << iterations << " trials:\n";
-    std::cout << "  Avg time: " << avg_ns << " ns"
+    std::cout << "Benchmark results for: " << file_Path << "\n";
+    std::cout << "Stations count: " << stations.size() << "\n";
+    std::cout << "Iterations: " << iterations << "\n";
+    std::cout << "Avg time: " << avg_ns << " ns"
               << " (" << (avg_ns / 1000.0) << " µs, "
               << (avg_ns / 1e6) << " ms)" << std::endl;
+}
+
+void Algo::initialize_stations_from_file(const std::string &filename)
+{
+     std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Cannot open file: " << filename << "\n";
+        return;
+    }
+
+    std::string line;
+    stations.clear();
+
+    while (std::getline(file, line)) {
+        size_t tab_pos = line.find('\t');
+        if (tab_pos == std::string::npos) continue; // skip malformed lines
+
+        std::string english_name = line.substr(0, tab_pos);
+        stations.push_back({english_name, false}); // all set to not faulty
+    }
+
+    file.close();
 }
 
 void Algo::print_stations()
@@ -242,5 +276,13 @@ void Algo::print_stations()
     {
         std::cout << "Station Name: " << station.name 
                   << ", Faulty: " << (station.faulty ? "Yes" : "No") << std::endl;
+    }
+    std::cout << "Total stations: " << stations.size() << std::endl;
+}
+
+void Algo::reset()
+{
+    for (auto& station : stations) {
+        station.faulty = false;
     }
 }
