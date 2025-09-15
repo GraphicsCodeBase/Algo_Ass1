@@ -175,7 +175,6 @@ void Algo::find_faulty_station_binary()
 
     // previous single-run timing replaced with repeated trials for accuracy
     const int trials = 1000; // increase if you need smoother averages
-    // warm-up (optional) to mitigate one-time costs
     {
         std::vector<Station> warm = stations;
         std::stable_sort(warm.begin(), warm.end(),
