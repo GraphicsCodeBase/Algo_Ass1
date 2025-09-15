@@ -4,6 +4,7 @@
 
 void Algo::initialize_stations()
 {
+    //all stattions initalised to not faulty.
     stations = {
         {"Jurong East", false},
         {"Bukit Batok", false},
@@ -135,6 +136,7 @@ void Algo::random_faulty_station()
     static std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
     std::uniform_int_distribution<size_t> dist(0, stations.size() - 1);
 
+    //set a random station to faulty (true).
     size_t randomIndex = dist(rng);
     stations[randomIndex].faulty = true;
 
@@ -147,11 +149,7 @@ void Algo::find_faulty_station()
 {
     // Main method that demonstrates both algorithms
     std::cout << "\n=== FAULTY STATION DETECTION ===" << std::endl;
-    
-    // Linear Search
-    std::cout << "\n1. Linear Search Algorithm:" << std::endl;
-    find_faulty_station_linear();
-    
+        
     // Binary Search (requires sorting first)
     std::cout << "\n2. Binary Search Algorithm:" << std::endl;
     find_faulty_station_binary();
@@ -160,117 +158,100 @@ void Algo::find_faulty_station()
     print_performance_analysis();
 }
 
-void Algo::find_faulty_station_linear()
-{
-    if (stations.empty()) {
-        std::cout << "No stations available for search." << std::endl;
-        return;
-    }
-    
-    int comparisons = 0;
-    auto start_time = std::chrono::high_resolution_clock::now();
-    
-    // Linear search through all stations
-    for (size_t i = 0; i < stations.size(); ++i) {
-        comparisons++;
-        if (stations[i].faulty) {
-            auto end_time = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-            
-            std::cout << "✓ Found faulty station: " << stations[i].name 
-                      << " at index " << i << std::endl;
-            std::cout << "  Comparisons made: " << comparisons << std::endl;
-            std::cout << "  Time taken: " << duration.count() << " microseconds" << std::endl;
-            std::cout << "  Time Complexity: O(n)" << std::endl;
-            return;
-        }
-    }
-    
-    std::cout << "✗ No faulty station found!" << std::endl;
-}
-
 void Algo::find_faulty_station_binary()
 {
     if (stations.empty()) {
         std::cout << "No stations available for search." << std::endl;
         return;
     }
-    
-    // For binary search, we need to sort by name first
-    // Create a copy and sort it
+
+    // Sort by faulty flag so predicate is monotonic: all false then all true.
     std::vector<Station> sorted_stations = stations;
-    std::sort(sorted_stations.begin(), sorted_stations.end(), 
-              [](const Station& a, const Station& b) {
-                  return a.name < b.name;
-              });
-    
-    int comparisons = 0;
-    auto start_time = std::chrono::high_resolution_clock::now();
-    
-    // Binary search for faulty station
-    int left = 0, right = sorted_stations.size() - 1;
-    int faulty_index = -1;
-    
-    while (left <= right) {
-        comparisons++;
-        int mid = left + (right - left) / 2;
-        
-        if (sorted_stations[mid].faulty) {
-            faulty_index = mid;
-            break;
-        }
-        
-        // Since we're looking for faulty stations, we need to search both halves
-        // This is a bit unusual for binary search, but we'll search left half first
-        if (mid > 0) {
-            right = mid - 1;
-        } else {
-            left = mid + 1;
+    std::stable_sort(sorted_stations.begin(), sorted_stations.end(),
+                     [](const Station& a, const Station& b) {
+                         if (a.faulty == b.faulty) return false;
+                         return (!a.faulty && b.faulty);
+                     });
+
+    // previous single-run timing replaced with repeated trials for accuracy
+    const int trials = 1000; // increase if you need smoother averages
+    // warm-up (optional) to mitigate one-time costs
+    {
+        std::vector<Station> warm = stations;
+        std::stable_sort(warm.begin(), warm.end(),
+                         [](const Station& a, const Station& b) {
+                             if (a.faulty == b.faulty) return false;
+                             return (!a.faulty && b.faulty);
+                         });
+        // run one binary-search to warm caches
+        int l = 0, r = static_cast<int>(warm.size()) - 1;
+        while (l < r) {
+            int m = l + (r - l) / 2;
+            if (warm[m].faulty) r = m; else l = m + 1;
         }
     }
-    
-    // If not found in left half, search right half
-    if (faulty_index == -1) {
-        left = 0;
-        right = sorted_stations.size() - 1;
-        while (left <= right) {
-            comparisons++;
+
+    std::chrono::nanoseconds total_duration(0);
+    long long total_comparisons = 0;
+    int last_found_index = -1;
+
+    for (int t = 0; t < trials; ++t) {
+        std::vector<Station> sorted_stations = stations; // sort cost included if that matches your scenario
+
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        std::stable_sort(sorted_stations.begin(), sorted_stations.end(),
+                         [](const Station& a, const Station& b) {
+                             if (a.faulty == b.faulty) return false;
+                             return (!a.faulty && b.faulty);
+                         });
+
+        int left = 0;
+        int right = static_cast<int>(sorted_stations.size()) - 1;
+        int faulty_index_local = -1;
+        int comparisons_local = 0;
+
+        while (left < right) {
+            ++comparisons_local;
             int mid = left + (right - left) / 2;
-            
             if (sorted_stations[mid].faulty) {
-                faulty_index = mid;
-                break;
+                right = mid;
+            } else {
+                left = mid + 1;
             }
-            
-            left = mid + 1;
         }
+
+        if (!sorted_stations.empty() && sorted_stations[left].faulty) {
+            faulty_index_local = left;
+        }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        total_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time);
+        total_comparisons += comparisons_local;
+        last_found_index = faulty_index_local;
     }
-    
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    
-    if (faulty_index != -1) {
-        std::cout << "✓ Found faulty station: " << sorted_stations[faulty_index].name 
-                  << " at sorted index " << faulty_index << std::endl;
-        std::cout << "  Comparisons made: " << comparisons << std::endl;
-        std::cout << "  Time taken: " << duration.count() << " microseconds" << std::endl;
-        std::cout << "  Time Complexity: O(log n) + O(n log n) for sorting" << std::endl;
+
+    double avg_ns = static_cast<double>(total_duration.count()) / trials;
+    double avg_comparisons = static_cast<double>(total_comparisons) / trials;
+
+    if (last_found_index != -1) {
+        std::cout << "✓ Found faulty station: " << sorted_stations[last_found_index].name
+                  << " at sorted index " << last_found_index << std::endl;
+        std::cout << "  Avg comparisons: " << avg_comparisons << std::endl;
+        std::cout << "  Avg time per trial: " << avg_ns << " ns"
+                  << " (" << (avg_ns / 1000.0) << " µs, " << (avg_ns / 1e6) << " ms)" << std::endl;
+        std::cout << "  Time Complexity: O(n log n) for sorting + O(log n) for search" << std::endl;
     } else {
         std::cout << "✗ No faulty station found!" << std::endl;
     }
 }
+
 
 void Algo::print_performance_analysis()
 {
     std::cout << "\n=== PERFORMANCE ANALYSIS ===" << std::endl;
     std::cout << "Total stations: " << stations.size() << std::endl;
     std::cout << "\nAlgorithm Comparison:" << std::endl;
-    std::cout << "1. Linear Search:" << std::endl;
-    std::cout << "   - Time Complexity: O(n)" << std::endl;
-    std::cout << "   - Space Complexity: O(1)" << std::endl;
-    std::cout << "   - Best Case: O(1) - faulty station at index 0" << std::endl;
-    std::cout << "   - Worst Case: O(n) - faulty station at last index" << std::endl;
-    std::cout << "   - Average Case: O(n/2)" << std::endl;
     
     std::cout << "\n2. Binary Search:" << std::endl;
     std::cout << "   - Time Complexity: O(log n) + O(n log n) for sorting" << std::endl;

@@ -16,7 +16,6 @@ class Algo {
     void initialize_stations();
     void random_faulty_station();
     void find_faulty_station();
-    void find_faulty_station_linear();
     void find_faulty_station_binary();
     void print_stations();
     void print_performance_analysis();
