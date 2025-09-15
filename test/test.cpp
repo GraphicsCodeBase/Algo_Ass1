@@ -1,71 +1,150 @@
 #include <gtest/gtest.h>
+#include <iostream>
+#include <chrono>
 #include "../src/algo.hpp"
 
-// class AlgoTest : public ::testing::Test {
-// protected:
-//     void SetUp() override {
-//         algo.initialize_stations();
-//     }
-    
-//     Algo algo;
-// };
+//the class will inhherit from the test framework of GTest.
+class AlgoTest : public ::testing::Test{
 
-// // Test station initialization
-// TEST_F(AlgoTest, StationInitialization) {
-//     // Check that all stations are initialized as not faulty
-//     for (const auto& station : algo.stations) {
-//         EXPECT_FALSE(station.faulty) << "Station " << station.name << " should not be faulty initially";
-//     }
-//     EXPECT_GT(algo.stations.size(), 0) << "Should have stations initialized";
-// }
+protected :
+    Algo algo;
 
-// // Test random faulty station selection
-// TEST_F(AlgoTest, RandomFaultyStation) {
-//     algo.random_faulty_station();
-    
-//     // Count faulty stations
-//     int faulty_count = 0;
-//     for (const auto& station : algo.stations) {
-//         if (station.faulty) {
-//             faulty_count++;
-//         }
-//     }
-    
-//     EXPECT_EQ(faulty_count, 1) << "Should have exactly one faulty station";
-// }
+    void SetUp() override
+    {
+        // This runs before each test
+        //this will set every station to not faulty.(false)
+        algo.initialize_stations();
+    }
 
-// // Test linear search algorithm
-// TEST_F(AlgoTest, LinearSearchFindsFaultyStation) {
-//     // Set a specific station as faulty for testing
-//     if (!algo.stations.empty()) {
-//         algo.stations[0].faulty = true;
-        
-//         // Test that linear search finds it
-//         // Note: This tests the logic, actual output testing would require capturing cout
-//         EXPECT_TRUE(algo.stations[0].faulty) << "First station should be faulty";
-//     }
-// }
+     void TearDown() override {
+        // This runs after each test (optional here)
+        //thinking if i need to call the desctructor or not.
+    }
+};
 
-// // Test with no faulty stations
-// TEST_F(AlgoTest, NoFaultyStations) {
-//     // Ensure no stations are faulty
-//     for (auto& station : algo.stations) {
-//         station.faulty = false;
-//     }
-    
-//     // Count faulty stations
-//     int faulty_count = 0;
-//     for (const auto& station : algo.stations) {
-//         if (station.faulty) {
-//             faulty_count++;
-//         }
-//     }
-    
-//     EXPECT_EQ(faulty_count, 0) << "Should have no faulty stations";
-// }
+TEST_F(AlgoTest, Single_Run_Nano)
+{
+    algo.random_faulty_station();
 
-// // Test station count
-// TEST_F(AlgoTest, StationCount) {
-//     // Based on the implementation, we should have 121 stations
-//     EXPECT_EQ(algo.stations.size(), 121) << "Should have 121 MRT stations";
-// }
+    auto start = std::chrono::high_resolution_clock::now();
+    std::string faulty = algo.find_faulty_station_binary();
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // Measure in nanoseconds
+    auto elapsed_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    // 1. Check correctness
+    ASSERT_FALSE(faulty.empty());
+    auto it = std::find_if(algo.stations.begin(), algo.stations.end(),
+                           [&](const Station& s) { return s.name == faulty; });
+    ASSERT_NE(it, algo.stations.end());
+    ASSERT_TRUE(it->faulty);
+
+    // 2. Print / check nanoseconds
+    std::cout << "Binary search took " << elapsed_ns << " ns\n";
+
+    // Optional: enforce an upper bound
+    EXPECT_LT(elapsed_ns, 1000000) << "Binary search took too long!"; // e.g., 1 ms = 1,000,000 ns
+}
+
+TEST_F(AlgoTest, Twenty_Runs)
+{
+    const int num_runs = 20;
+    int successes = 0;
+    long long total_ns = 0;
+
+    for (int i = 0; i < num_runs; ++i) {
+        algo.initialize_stations();      // reset all stations to non-faulty
+        algo.random_faulty_station();    // randomly set one station to faulty
+
+        auto start = std::chrono::high_resolution_clock::now();
+        std::string faulty_name = algo.find_faulty_station_binary(); // or return index
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        total_ns += elapsed_ns;
+
+        // Check if the returned station is actually faulty
+        auto it = std::find_if(algo.stations.begin(), algo.stations.end(),
+                               [&](const Station& s){ return s.name == faulty_name; });
+
+        if (it != algo.stations.end() && it->faulty) {
+            ++successes;
+        }
+    }
+
+    double avg_ns = static_cast<double>(total_ns) / num_runs;
+    std::cout << "Successes: " << successes << " / " << num_runs << "\n";
+    std::cout << "Average search time: " << avg_ns << " ns\n";
+
+    // Ensure algorithm succeeded every run
+    ASSERT_EQ(successes, num_runs);
+}
+
+TEST_F(AlgoTest, Hundred_Runs)
+{
+    const int num_runs = 100;
+    int successes = 0;
+    long long total_ns = 0;
+
+    for (int i = 0; i < num_runs; ++i) {
+        algo.initialize_stations();      // reset all stations to non-faulty
+        algo.random_faulty_station();    // randomly set one station to faulty
+
+        auto start = std::chrono::high_resolution_clock::now();
+        std::string faulty_name = algo.find_faulty_station_binary(); // or return index
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        total_ns += elapsed_ns;
+
+        // Check if the returned station is actually faulty
+        auto it = std::find_if(algo.stations.begin(), algo.stations.end(),
+                               [&](const Station& s){ return s.name == faulty_name; });
+
+        if (it != algo.stations.end() && it->faulty) {
+            ++successes;
+        }
+    }
+
+    double avg_ns = static_cast<double>(total_ns) / num_runs;
+    std::cout << "Successes: " << successes << " / " << num_runs << "\n";
+    std::cout << "Average search time: " << avg_ns << " ns\n";
+
+    // Ensure algorithm succeeded every run
+    ASSERT_EQ(successes, num_runs);
+}
+
+TEST_F(AlgoTest, Multiple_Runs)
+{
+    const int num_runs = 1000;
+    int successes = 0;
+    long long total_ns = 0;
+
+    for (int i = 0; i < num_runs; ++i) {
+        algo.initialize_stations();      // reset all stations to non-faulty
+        algo.random_faulty_station();    // randomly set one station to faulty
+
+        auto start = std::chrono::high_resolution_clock::now();
+        std::string faulty_name = algo.find_faulty_station_binary(); // or return index
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        total_ns += elapsed_ns;
+
+        // Check if the returned station is actually faulty
+        auto it = std::find_if(algo.stations.begin(), algo.stations.end(),
+                               [&](const Station& s){ return s.name == faulty_name; });
+
+        if (it != algo.stations.end() && it->faulty) {
+            ++successes;
+        }
+    }
+
+    double avg_ns = static_cast<double>(total_ns) / num_runs;
+    std::cout << "Successes: " << successes << " / " << num_runs << "\n";
+    std::cout << "Average search time: " << avg_ns << " ns\n";
+
+    // Ensure algorithm succeeded every run
+    ASSERT_EQ(successes, num_runs);
+}

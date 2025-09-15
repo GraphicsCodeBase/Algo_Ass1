@@ -16,11 +16,12 @@ class Algo {
     void initialize_stations();
     void random_faulty_station();
     void find_faulty_station();
-    void find_faulty_station_binary();
+    std::string find_faulty_station_binary();
     void print_stations();
     void print_performance_analysis();
+    void benchmark_find_faulty_station_binary(int iterations = 1000);
 
-    protected:
     //holding the list of stations.
     std::vector<Station> stations;
+
 };

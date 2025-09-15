@@ -15,7 +15,8 @@ int main() {
     Algo algo;
     algo.initialize_stations();
     algo.random_faulty_station();
-    algo.print_stations();
-    algo.find_faulty_station();
+    //algo.print_stations();
+    //algo.find_faulty_station();
+    algo.benchmark_find_faulty_station_binary(1000);
     return 0;
 }

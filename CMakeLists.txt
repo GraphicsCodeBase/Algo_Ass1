@@ -22,6 +22,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # -----------------------
+# Your library
+# -----------------------
+add_library(algo
+    src/algo.cpp
+    src/algo.hpp
+)
+
+# -----------------------
 # Main executable
 # -----------------------
 add_executable(main
@@ -29,6 +37,7 @@ add_executable(main
     src/algo.cpp
     # any other source files needed for the main program
 )
+target_link_libraries(main PRIVATE algo)
 
 # -----------------------
 # Test executable
@@ -44,8 +53,9 @@ add_executable(runTests
 )
 
 # Link GoogleTest library
-target_link_libraries(runTests gtest_main)
+target_link_libraries(runTests PRIVATE algo gtest_main)
 
-# Enable CTest and register the test
+# Enable testing and discover tests
+include(GoogleTest)
 enable_testing()
-add_test(NAME all_tests COMMAND runTests)
+gtest_discover_tests(runTests PROPERTIES TIMEOUT 10)
