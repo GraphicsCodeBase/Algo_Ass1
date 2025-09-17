@@ -211,7 +211,7 @@ void Algo::print_performance_analysis()
 void Algo::benchmark_find_faulty_station_binary(std::string file_Path, int iterations)
 {
     using namespace std::chrono;
-
+    long long total_comparisons = 0;
     // First load the stations from file
     initialize_stations_from_file(file_Path);
     
@@ -225,49 +225,126 @@ void Algo::benchmark_find_faulty_station_binary(std::string file_Path, int itera
     
     for (int t = 0; t < iterations; ++t) {
         // Reset all stations to not faulty for this iteration
-        reset();  // You'll need to implement this
+        reset();
         
         // Mark one random station as faulty
-        random_faulty_station();
+        generateStationsWithThreshold(stations, static_cast<int>(stations.size()));
 
+        int compare_count = 0;
         auto start = high_resolution_clock::now();
-        find_faulty_station_binary();
+        int index = find_faulty_station_threshold(compare_count);
         auto end = high_resolution_clock::now();
 
         total_time += duration_cast<nanoseconds>(end - start);
+        total_comparisons += compare_count;
     }
 
     // Benchmark and print out the stats
     double avg_ns = static_cast<double>(total_time.count()) / iterations;
-
+    // Average comparisons
+    double avg_comparisons = static_cast<double>(total_comparisons) / iterations;
     std::cout << "Benchmark results for: " << file_Path << "\n";
     std::cout << "Stations count: " << stations.size() << "\n";
     std::cout << "Iterations: " << iterations << "\n";
     std::cout << "Avg time: " << avg_ns << " ns"
               << " (" << (avg_ns / 1000.0) << " µs, "
               << (avg_ns / 1e6) << " ms)" << std::endl;
+    std::cout << "Avg comparisons: " << avg_comparisons << "\n";
+    std::cout << "Expected max comparisons (log2 n): "
+            << std::ceil(std::log2(stations.size())) << "\n";
 }
 
-void Algo::initialize_stations_from_file(const std::string &filename)
+void Algo::initialize_stations_from_file(const std::string& filename)
 {
-     std::ifstream file(filename);
+    std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Cannot open file: " << filename << "\n";
         return;
     }
 
-    std::string line;
     stations.clear();
+    std::string line;
 
     while (std::getline(file, line)) {
-        size_t tab_pos = line.find('\t');
-        if (tab_pos == std::string::npos) continue; // skip malformed lines
+        // Trim spaces at start and end
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
 
-        std::string english_name = line.substr(0, tab_pos);
-        stations.push_back({english_name, false}); // all set to not faulty
+        if (line.empty()) continue; // skip empty lines
+
+        stations.push_back({ line, false }); // all stations not faulty
     }
 
     file.close();
+}
+
+void Algo::generate_large_station_list(int count, std::string &fileName)
+{
+     std::ofstream out(fileName);
+    if (!out.is_open()) {
+        std::cerr << "Failed to open file: " << fileName << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+        Station s;
+        s.name = "Station" + std::to_string(i);
+        s.faulty = false;
+
+        // Write as "StationName false"
+        out << s.name << " " << (s.faulty ? "true" : "false") << "\n";
+    }
+
+    out.close();
+    std::cout << "Generated " << count << " stations into " << fileName << std::endl;
+}
+
+void Algo::generateStationsWithThreshold(std::vector<Station> &stations, int numStations)
+{
+    stations.clear();
+    stations.reserve(numStations);
+
+    // Fill stations with names and all false
+    for (int i = 0; i < numStations; ++i) {
+        stations.push_back({ "Station" + std::to_string(i), false });
+    }
+
+    // Pick a random threshold index
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, numStations - 1);
+    int threshold = dis(gen);
+
+    // Mark all stations from threshold onward as faulty
+    for (int i = threshold; i < numStations; ++i) {
+        stations[i].faulty = true;
+    }
+
+    std::cout << "Threshold index: " << threshold << " (" << stations[threshold].name << ")\n";
+}
+
+int Algo::find_faulty_station_threshold(int& comparisons)
+{
+    int left = 0;
+    int right = static_cast<int>(stations.size()) - 1; // vector size is size_t, cast to int
+    int result = -1; // stores index of first faulty station
+    comparisons = 0;
+
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        comparisons++; // counting the mid check
+        if (stations[mid].faulty) {
+            // Possible first faulty station
+            result = mid;
+            // Look left to find an earlier faulty
+            right = mid - 1;
+        } else {
+            // No fault here, move right
+            left = mid + 1;
+        }
+    }
+
+    return result; // -1 if no faulty station
 }
 
 void Algo::print_stations()

@@ -21,7 +21,10 @@ class Algo {
     void print_performance_analysis();
     void benchmark_find_faulty_station_binary(std::string file_Path , int iterations = 1000);
     void initialize_stations_from_file(const std::string& filename);
-    
+    void generate_large_station_list(int count, std::string& fileName);
+
+    void generateStationsWithThreshold(std::vector<Station>& stations, int numStations);
+    int find_faulty_station_threshold(int& comparisons);
     void reset();
 
     //holding the list of stations.
