@@ -27,7 +27,7 @@ FetchContent_MakeAvailable(googletest)
 add_library(algo
     src/algo.cpp
     src/algo.hpp
-)
+ "src/bucket_sort.cpp")
 
 # -----------------------
 # Main executable
@@ -36,7 +36,7 @@ add_executable(main
     src/main.cpp
     src/algo.cpp
     # any other source files needed for the main program
-)
+ "src/bucket_sort.cpp" )
 target_link_libraries(main PRIVATE algo)
 
 # -----------------------
@@ -50,7 +50,7 @@ file(GLOB TEST_SOURCES "test/*.cpp")
 add_executable(runTests
     ${SOURCES}
     ${TEST_SOURCES}
-)
+ "src/bucket_sort.cpp")
 
 # Link GoogleTest library
 target_link_libraries(runTests PRIVATE algo gtest_main)
