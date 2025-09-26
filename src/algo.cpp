@@ -1,206 +1,226 @@
 #include "algo.hpp"
+#include <chrono>
 
-void Algo::loadStations(std::string file_path)
-{
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << file_path << std::endl;
-        return;
+// Re-implementing initializeData with the new 8x10 large dataset
+void WeightedPreferenceBiddingAlgorithm::initializeData() {
+    // New large dataset: 8 Platforms and 10 Restaurants
+    platforms = { "GrabFood", "Foodpanda", "Deliveroo", "WhyQ", "honestbee", "Oddle", "UberEats", "FoodLion" };
+    restaurants = { "PastaExpress_Orchard", "ChiliCrab_Marina", "BakKutTeh_Chinatown",
+                   "ChickenRice_Bugis", "LaksaKing_Katong", "SatayGrill_Clarke",
+                   "DimSum_Tanjong", "NasiLemak_Geylang", "RotiPrata_Little", "ZiChar_Toa" };
+
+    // Initialize platform budgets (simulating market strength)
+    platform_budgets["GrabFood"] = 1500.0;
+    platform_budgets["Foodpanda"] = 1400.0;
+    platform_budgets["Deliveroo"] = 1200.0;
+    platform_budgets["UberEats"] = 1100.0;
+    platform_budgets["honestbee"] = 900.0;
+    platform_budgets["WhyQ"] = 800.0;
+    platform_budgets["Oddle"] = 700.0;
+    platform_budgets["FoodLion"] = 600.0;
+
+    // Initialize restaurant capacities (simulating popularity/size)
+    restaurant_capacities["ChiliCrab_Marina"] = 100;
+    restaurant_capacities["PastaExpress_Orchard"] = 95;
+    restaurant_capacities["DimSum_Tanjong"] = 90;
+    restaurant_capacities["LaksaKing_Katong"] = 85;
+    restaurant_capacities["ChickenRice_Bugis"] = 80;
+    restaurant_capacities["SatayGrill_Clarke"] = 75;
+    restaurant_capacities["NasiLemak_Geylang"] = 70;
+    restaurant_capacities["BakKutTeh_Chinatown"] = 65;
+    restaurant_capacities["RotiPrata_Little"] = 60;
+    restaurant_capacities["ZiChar_Toa"] = 55;
+
+    // Convert preferences to weighted scores
+    initializeWeights();
+}
+
+void WeightedPreferenceBiddingAlgorithm::initializeWeights() {
+    // P-side preferences (10 = most preferred, 1 = least preferred)
+    std::map<std::string, std::vector<std::string>> platform_prefs = {
+        {"GrabFood", {"ChiliCrab_Marina", "PastaExpress_Orchard", "LaksaKing_Katong", "DimSum_Tanjong", "ChickenRice_Bugis", "SatayGrill_Clarke", "NasiLemak_Geylang", "BakKutTeh_Chinatown", "RotiPrata_Little", "ZiChar_Toa"}},
+        {"Foodpanda", {"PastaExpress_Orchard", "ChiliCrab_Marina", "ChickenRice_Bugis", "LaksaKing_Katong", "DimSum_Tanjong", "SatayGrill_Clarke", "NasiLemak_Geylang", "BakKutTeh_Chinatown", "ZiChar_Toa", "RotiPrata_Little"}},
+        {"Deliveroo", {"LaksaKing_Katong", "PastaExpress_Orchard", "DimSum_Tanjong", "ChiliCrab_Marina", "SatayGrill_Clarke", "ChickenRice_Bugis", "NasiLemak_Geylang", "RotiPrata_Little", "BakKutTeh_Chinatown", "ZiChar_Toa"}},
+        {"WhyQ", {"ChickenRice_Bugis", "BakKutTeh_Chinatown", "RotiPrata_Little", "NasiLemak_Geylang", "LaksaKing_Katong", "DimSum_Tanjong", "ChiliCrab_Marina", "PastaExpress_Orchard", "SatayGrill_Clarke", "ZiChar_Toa"}},
+        {"honestbee", {"DimSum_Tanjong", "LaksaKing_Katong", "ChiliCrab_Marina", "PastaExpress_Orchard", "SatayGrill_Clarke", "ChickenRice_Bugis", "NasiLemak_Geylang", "BakKutTeh_Chinatown", "RotiPrata_Little", "ZiChar_Toa"}},
+        {"Oddle", {"BakKutTeh_Chinatown", "ZiChar_Toa", "RotiPrata_Little", "NasiLemak_Geylang", "ChickenRice_Bugis", "LaksaKing_Katong", "PastaExpress_Orchard", "ChiliCrab_Marina", "DimSum_Tanjong", "SatayGrill_Clarke"}},
+        {"UberEats", {"ChiliCrab_Marina", "DimSum_Tanjong", "SatayGrill_Clarke", "PastaExpress_Orchard", "LaksaKing_Katong", "ChickenRice_Bugis", "NasiLemak_Geylang", "RotiPrata_Little", "BakKutTeh_Chinatown", "ZiChar_Toa"}},
+        {"FoodLion", {"SatayGrill_Clarke", "NasiLemak_Geylang", "RotiPrata_Little", "ZiChar_Toa", "BakKutTeh_Chinatown", "ChickenRice_Bugis", "LaksaKing_Katong", "PastaExpress_Orchard", "ChiliCrab_Marina", "DimSum_Tanjong"}}
+    };
+
+    // Convert P-prefs to weights (10-1)
+    for (const auto& platform : platforms) {
+        for (int i = 0; i < platform_prefs[platform].size(); ++i) {
+            platform_weights[platform][platform_prefs[platform][i]] = restaurants.size() - i;
+        }
     }
 
-    stations.clear();
-    std::string line;
+    // R-side preferences (8 = most preferred, 1 = least preferred)
+    std::map<std::string, std::vector<std::string>> restaurant_prefs = {
+        {"PastaExpress_Orchard", {"Deliveroo", "GrabFood", "Foodpanda", "UberEats", "honestbee", "Oddle", "WhyQ", "FoodLion"}},
+        {"ChiliCrab_Marina", {"GrabFood", "Foodpanda", "UberEats", "honestbee", "Deliveroo", "Oddle", "WhyQ", "FoodLion"}},
+        {"BakKutTeh_Chinatown", {"Oddle", "WhyQ", "GrabFood", "Foodpanda", "Deliveroo", "UberEats", "honestbee", "FoodLion"}},
+        {"ChickenRice_Bugis", {"Foodpanda", "GrabFood", "WhyQ", "honestbee", "Deliveroo", "UberEats", "Oddle", "FoodLion"}},
+        {"LaksaKing_Katong", {"GrabFood", "Deliveroo", "honestbee", "Foodpanda", "WhyQ", "UberEats", "Oddle", "FoodLion"}},
+        {"SatayGrill_Clarke", {"FoodLion", "UberEats", "honestbee", "Deliveroo", "GrabFood", "Foodpanda", "WhyQ", "Oddle"}},
+        {"DimSum_Tanjong", {"honestbee", "UberEats", "Deliveroo", "Foodpanda", "GrabFood", "WhyQ", "Oddle", "FoodLion"}},
+        {"NasiLemak_Geylang", {"WhyQ", "FoodLion", "Oddle", "honestbee", "Deliveroo", "Foodpanda", "GrabFood", "UberEats"}},
+        {"RotiPrata_Little", {"Oddle", "FoodLion", "WhyQ", "Deliveroo", "honestbee", "Foodpanda", "GrabFood", "UberEats"}},
+        {"ZiChar_Toa", {"Oddle", "FoodLion", "WhyQ", "honestbee", "Deliveroo", "Foodpanda", "GrabFood", "UberEats"}}
+    };
 
-    while (std::getline(file, line)) {
-        Station s;
-        s.name = line;
-        s.faulty = false;
+    // Convert R-prefs to weights (8-1)
+    for (const auto& restaurant : restaurants) {
+        for (int i = 0; i < restaurant_prefs[restaurant].size(); ++i) {
+            restaurant_weights[restaurant][restaurant_prefs[restaurant][i]] = platforms.size() - i;
+        }
+    }
+}
 
-        // Parse ID from the line
-        size_t underscorePos = line.find('_');
-        if (underscorePos != std::string::npos) {
-            s.id = std::stoi(line.substr(underscorePos + 1));
-        } else {
-            s.id = 1; // fallback
+// Core bidding score formula
+double WeightedPreferenceBiddingAlgorithm::calculateBiddingScore(const std::string& platform, const std::string& restaurant) {
+    // Formula: Score = sqrt(PlatformPref × RestaurantPref) × (Budget/Capacity) × 10
+    double platform_pref = platform_weights[platform][restaurant];
+    double restaurant_pref = restaurant_weights[restaurant][platform];
+    double budget_factor = platform_budgets[platform] / 1500.0; // Normalize budget using max budget (1500)
+    double capacity_req = restaurant_capacities[restaurant] / 100.0; // Normalize capacity using max capacity (100)
+
+    double mutual_preference = std::sqrt(platform_pref * restaurant_pref);
+    double economic_factor = budget_factor / capacity_req;
+
+    return mutual_preference * economic_factor * 10.0; // Scale up for visibility
+}
+
+// Core WPBA execution logic
+void WeightedPreferenceBiddingAlgorithm::runWeightedPreferenceBiddingAlgorithm() {
+
+    // Clear previous matches/scores
+    final_matches.clear();
+    satisfaction_scores.clear();
+
+    // PHASE 1: Calculate all bidding scores
+    std::map<std::string, std::map<std::string, double>> bidding_matrix;
+
+    for (const auto& platform : platforms) {
+        for (const auto& restaurant : restaurants) {
+            double score = calculateBiddingScore(platform, restaurant);
+            bidding_matrix[platform][restaurant] = score;
+        }
+    }
+
+    // PHASE 2: Competitive matching using iterative best-bid selection
+    std::set<std::string> matched_platforms;
+    std::set<std::string> matched_restaurants;
+    int round = 1;
+
+    // The maximum possible matches is the size of the smaller set (8 platforms)
+    while (matched_platforms.size() < platforms.size() && round <= 10) {
+
+        double max_score = -1;
+        std::string best_platform, best_restaurant;
+
+        // Find the highest unmatched bidding score
+        for (const auto& platform : platforms) {
+            if (matched_platforms.find(platform) != matched_platforms.end()) continue;
+
+            for (const auto& restaurant : restaurants) {
+                if (matched_restaurants.find(restaurant) != matched_restaurants.end()) continue;
+
+                if (bidding_matrix[platform][restaurant] > max_score) {
+                    max_score = bidding_matrix[platform][restaurant];
+                    best_platform = platform;
+                    best_restaurant = restaurant;
+                }
+            }
         }
 
-        stations.push_back(s);
-    }
+        if (max_score > 0) {
+            // Make the match
+            final_matches[best_platform] = best_restaurant;
+            matched_platforms.insert(best_platform);
+            matched_restaurants.insert(best_restaurant);
 
-    file.close();
-}
-
-
-int Algo::setRandomFaultyStation()
-{
- if (stations.size() < 2) return -1; // Need at least 2 stations
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(0, stations.size() - 2); // avoid last
-
-    int index = dist(gen);
-
-    int baseID = stations[index].id;
-    int nextID = stations[index + 1].id;
-
-    int targetID;
-
-    if (nextID - baseID > 1) {
-        // There is a gap; pick a random number in-between
-        std::uniform_int_distribution<> offsetDist(1, nextID - baseID - 1);
-        int offset = offsetDist(gen);
-        targetID = baseID + offset;
-    } else {
-        // No gap; fallback to picking a station ID (will be found in 1 probe)
-        targetID = baseID;
-    }
-
-    std::cout << "Generated hard target ID: " << targetID 
-              << " (between " << baseID << " and " << nextID << ")\n";
-
-    return targetID;
-}
-
-int Algo::interpolationSearch(int64_t targetID, int& probes)
-{
-    int low = 0;
-    int high = stations.size() - 1;
-    probes = 0;
-
-    while (low <= high && targetID >= stations[low].id && targetID <= stations[high].id) {
-        ++probes;
-
-        if (low == high) {
-            if (stations[low].id == targetID) return low;
-            return -1;
+            // Calculate satisfaction for this match
+            double satisfaction = (platform_weights[best_platform][best_restaurant] +
+                restaurant_weights[best_restaurant][best_platform]) /
+                (double)(platforms.size() + restaurants.size()) * 100.0;
+            satisfaction_scores[best_platform] = satisfaction;
+        }
+        else {
+            // No positive score match found, stop early
+            break;
         }
 
-        int pos = low + (int)((double)(targetID - stations[low].id) * (high - low) /
-                              (stations[high].id - stations[low].id));
-
-        if (stations[pos].id == targetID)
-            return pos;
-        else if (stations[pos].id < targetID)
-            low = pos + 1;
-        else
-            high = pos - 1;
+        round++;
     }
 
-    return -1;
+    // PHASE 3: Handle unmatched entities
+    for (const auto& platform : platforms) {
+        if (matched_platforms.find(platform) == matched_platforms.end()) {
+            final_matches[platform] = ""; // Unmatched
+            satisfaction_scores[platform] = 0.0;
+        }
+    }
 }
 
-void Algo::benchmarkInterpolationSearch(int targetID)
-{
-    int probes = 0;
+// Public method to analyze stability
+void WeightedPreferenceBiddingAlgorithm::analyzeStability() {
+    std::cout << "\n=== STABILITY ANALYSIS (WPBA CRITERIA) ===" << std::endl;
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int pos = interpolationSearch(targetID, probes);
-    auto end = std::chrono::high_resolution_clock::now();
+    int blocking_pairs = 0;
 
-    std::chrono::duration<double, std::micro> duration = end - start;
+    // Check for "blocking pairs" based on the bidding score
+    for (const auto& platform : platforms) {
+        for (const auto& restaurant : restaurants) {
 
-    std::cout << "----- Interpolation Search Benchmark -----" << std::endl;
-    std::cout << "Array size: " << stations.size() << std::endl;
-    std::cout << "Target station ID: " << targetID << std::endl;
+            // Current Match and Scores
+            std::string current_match_restaurant = final_matches[platform];
 
-    if (pos != -1)
-        std::cout << "Found at index: " << pos << std::endl;
-    else
-        std::cout << "Station not found." << std::endl;
+            // Only consider unmatched platform-restaurant pairs
+            if (current_match_restaurant == restaurant) continue;
 
-    std::cout << "Probes/iterations: " << probes << std::endl;
-    std::cout << "Time taken: " << duration.count() << " microseconds" << std::endl;
-    std::cout << "-----------------------------------------" << std::endl;
+            double potential_score = calculateBiddingScore(platform, restaurant);
+
+            // 1. Check if Platform P prefers R (better score than current match, if any)
+            bool platform_prefers_potential;
+            if (current_match_restaurant.empty()) {
+                platform_prefers_potential = (potential_score > 0);
+            }
+            else {
+                double current_score = calculateBiddingScore(platform, current_match_restaurant);
+                platform_prefers_potential = (potential_score > current_score);
+            }
+
+            // 2. Check if Restaurant R prefers P (better score than current match, if any)
+            std::string current_restaurant_partner = "";
+            for (const auto& p : platforms) {
+                if (final_matches[p] == restaurant) {
+                    current_restaurant_partner = p;
+                    break;
+                }
+            }
+
+            bool restaurant_prefers_potential;
+            if (current_restaurant_partner.empty()) {
+                restaurant_prefers_potential = (potential_score > 0);
+            }
+            else {
+                // To check R's preference for P, we use the potential score that (P, R) generated
+                double current_partner_potential_score = calculateBiddingScore(current_restaurant_partner, restaurant);
+                restaurant_prefers_potential = (potential_score > current_partner_potential_score);
+            }
+
+            if (platform_prefers_potential && restaurant_prefers_potential) {
+                blocking_pairs++;
+                std::cout << "Blocking Pair Found: " << platform << " - " << restaurant << std::endl;
+            }
+        }
+    }
+
+    if (blocking_pairs == 0) {
+        std::cout << "Matching is STABLE under WPBA criteria!" << std::endl;
+    }
+    else {
+        std::cout << "Found " << blocking_pairs << " blocking pairs. The WPBA may not be Stable based on its own score criteria." << std::endl;
+    }
 }
-
-void  Algo::generateNonUniformStations(const std::string& filepath, int numStations, int minGap, int maxGap) {
-    std::ofstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file for writing: " << filepath << std::endl;
-        return;
-    }
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> gapDist(minGap, maxGap); // random gap between consecutive stations
-
-    int currentID = 1;
-
-    for (int i = 0; i < numStations; ++i) {
-        file << "Station_" << currentID << std::endl; // write station name
-        int gap = (i % 2 == 0) ? maxGap * 10000 : gapDist(gen);
-        currentID += gap; // update currentID
-    }
-
-    file.close();
-    std::cout << "Generated " << numStations << " non-uniform stations in " << filepath << std::endl;
-}
-
-void Algo::generateHighlyNonUniformStations(const std::string &filepath, int numStations)
-{
-    std::ofstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filepath << std::endl;
-        return;
-    }
-
-    std::random_device rd;
-    std::mt19937_64 gen(rd()); // 64-bit RNG
-    std::uniform_int_distribution<int64_t> tinyGap(1, 5);
-    std::uniform_int_distribution<int64_t> mediumGap(50, 200);
-    std::uniform_int_distribution<int64_t> hugeGap(5000, 20000);
-
-    int64_t currentID = 1;
-
-    for (int i = 0; i < numStations; ++i) {
-        file << "Station_" << currentID << std::endl;
-
-        // Use highly irregular gaps
-        if (i % 10 == 0)
-            currentID += hugeGap(gen);
-        else if (i % 3 == 0)
-            currentID += mediumGap(gen);
-        else
-            currentID += tinyGap(gen);
-    }
-
-    file.close();
-    std::cout << "Generated " << numStations << " highly non-uniform stations in "
-              << filepath << std::endl;
-}
-
-int64_t Algo::generateHardTarget()
-{
-    if (stations.size() < 2) return -1;
-
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-
-    // Find a random gap big enough
-    std::vector<int> candidateIndices;
-    const int64_t minGap = 50; // minimum gap to generate a “hard target”
-
-    for (size_t i = 0; i < stations.size() - 1; ++i) {
-        if (stations[i + 1].id - stations[i].id > minGap)
-            candidateIndices.push_back(i);
-    }
-
-    if (candidateIndices.empty()) return stations[stations.size()/2].id;
-
-    std::uniform_int_distribution<> dist(0, candidateIndices.size() - 1);
-    int idx = candidateIndices[dist(gen)];
-
-    int64_t baseID = stations[idx].id;
-    int64_t nextID = stations[idx + 1].id;
-
-    std::uniform_int_distribution<int64_t> offsetDist(1, nextID - baseID - 1);
-    int64_t targetID = baseID + offsetDist(gen);
-
-    std::cout << "Generated hard target ID: " << targetID
-              << " (between " << baseID << " and " << nextID << ")\n";
-
-    return targetID;
-}
-
-
