@@ -3,8 +3,11 @@
 #include <random>
 #include <algorithm>
 #include <chrono>
+#include <fstream>
+#include <string>
 //this is to hold the station struct data
 struct Station{
+    std::int64_t id;
     std::string name; // name of station
     bool faulty;     //check if faulty or not.
 };
@@ -12,22 +15,16 @@ struct Station{
 
 class Algo {
     public :
-
-    void initialize_stations();
-    void random_faulty_station();
-    void find_faulty_station();
-    std::string find_faulty_station_binary();
-    void print_stations();
-    void print_performance_analysis();
-    void benchmark_find_faulty_station_binary(std::string file_Path , int iterations = 1000);
-    void initialize_stations_from_file(const std::string& filename);
-    void generate_large_station_list(int count, std::string& fileName);
-
-    void generateStationsWithThreshold(std::vector<Station>& stations, int numStations);
-    int find_faulty_station_threshold(int& comparisons);
-    void reset();
-
+    //interpolation search functions 
+    void loadStations(std::string file_path);
+    int setRandomFaultyStation();
+    int interpolationSearch(int64_t targetID, int& probes);
+    void benchmarkInterpolationSearch(int targetID);
+    void generateNonUniformStations(const std::string& filepath, int numStations, int minGap = 1, int maxGap = 50);
+    void generateHighlyNonUniformStations(const std::string& filepath, int numStations);
+    int64_t generateHardTarget();
+    private:
     //holding the list of stations.
     std::vector<Station> stations;
-
+    std::mt19937 gen;  // RNG reused
 };

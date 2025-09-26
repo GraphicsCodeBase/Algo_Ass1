@@ -1,264 +1,10 @@
 #include "algo.hpp"
-#include <algorithm>
-#include <chrono>
-#include <fstream>
-#include <string>
 
-void Algo::initialize_stations()
+void Algo::loadStations(std::string file_path)
 {
-    //all stattions initalised to not faulty.
-    stations = {
-        {"Jurong East", false},
-        {"Bukit Batok", false},
-        {"Bukit Gombak", false},
-        {"Choa Chu Kang", false},
-        {"Yew Tee", false},
-        {"Kranji", false},
-        {"Marsiling", false},
-        {"Woodlands", false},
-        {"Admiralty", false},
-        {"Sembawang", false},
-        {"Canberra", false},
-        {"Yishun", false},
-        {"Khatib", false},
-        {"Yio Chu Kang", false},
-        {"Ang Mo Kio", false},
-        {"Bishan", false},
-        {"Braddell", false},
-        {"Toa Payoh", false},
-        {"Novena", false},
-        {"Newton", false},
-        {"Orchard", false},
-        {"Somerset", false},
-        {"Dhoby Ghaut", false},
-        {"City Hall", false},
-        {"Raffles Place", false},
-        {"Marina Bay", false},
-        {"Marina South Pier", false},
-        {"Pasir Ris", false},
-        {"Tampines", false},
-        {"Simei", false},
-        {"Tanah Merah", false},
-        {"Bedok", false},
-        {"Kembangan", false},
-        {"Eunos", false},
-        {"Paya Lebar", false},
-        {"Aljunied", false},
-        {"Kallang", false},
-        {"Lavender", false},
-        {"Bugis", false},
-        {"Tanjong Pagar", false},
-        {"Outram Park", false},
-        {"Tiong Bahru", false},
-        {"Redhill", false},
-        {"Queenstown", false},
-        {"Commonwealth", false},
-        {"Buona Vista", false},
-        {"Dover", false},
-        {"Clementi", false},
-        {"Chinese Garden", false},
-        {"Lakeside", false},
-        {"Boon Lay", false},
-        {"Pioneer", false},
-        {"Joo Koon", false},
-        {"Gul Circle", false},
-        {"Tuas Crescent", false},
-        {"Tuas West Road", false},
-        {"Tuas Link", false},
-        {"Expo", false},
-        {"Changi Airport", false},
-        {"HarbourFront", false},
-        {"Chinatown", false},
-        {"Clarke Quay", false},
-        {"Little India", false},
-        {"Farrer Park", false},
-        {"Boon Keng", false},
-        {"Potong Pasir", false},
-        {"Woodleigh", false},
-        {"Serangoon", false},
-        {"Kovan", false},
-        {"Hougang", false},
-        {"Buangkok", false},
-        {"Sengkang", false},
-        {"Punggol", false},
-        {"Bras Basah", false},
-        {"Esplanade", false},
-        {"Promenade", false},
-        {"Nicoll Highway", false},
-        {"Stadium", false},
-        {"Mountbatten", false},
-        {"Dakota", false},
-        {"Tai Seng", false},
-        {"Bartley", false},
-        {"Lorong Chuan", false},
-        {"Marymount", false},
-        {"Caldecott", false},
-        {"Botanic Gardens", false},
-        {"Farrer Road", false},
-        {"Holland Village", false},
-        {"one-north", false},
-        {"Kent Ridge", false},
-        {"Haw Par Villa", false},
-        {"Pasir Panjang", false},
-        {"Labrador Park", false},
-        {"Telok Blangah", false},
-        {"Bayfront", false},
-        {"Downtown", false},
-        {"Telok Ayer", false},
-        {"Fort Canning", false},
-        {"Bencoolen", false},
-        {"Jalan Besar", false},
-        {"Bendemeer", false},
-        {"Geylang Bahru", false},
-        {"Mattar", false},
-        {"Bedok North", false},
-        {"Bedok Reservoir", false},
-        {"Tampines West", false},
-        {"Tampines East", false},
-        {"Upper Changi", false},
-        {"Gardens by the Bay", false},
-        {"Tanjong Rhu", false},
-        {"Katong Park", false},
-        {"Tanjong Katong", false},
-        {"Marine Parade", false},
-        {"Marine Terrace", false},
-        {"Siglap", false},
-        {"Bayshore", false}
-    };
-}
-
-void Algo::random_faulty_station()
-{
-    if (stations.empty())
-    {
-        return;
-    }
-
-    // random number generator seeded once per call
-    static std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
-    std::uniform_int_distribution<size_t> dist(0, stations.size() - 1);
-
-    //set a random station to faulty (true).
-    size_t randomIndex = dist(rng);
-    stations[randomIndex].faulty = true;
-
-    // optional: debug print
-    // std::cout << "Station " << stations[randomIndex].name 
-    //           << " is now faulty!" << std::endl;
-}
-
-void Algo::find_faulty_station()
-{
-    // Main method that demonstrates both algorithms
-    std::cout << "\n=== FAULTY STATION DETECTION ===" << std::endl;
-        
-    // Binary Search (requires sorting first)
-    std::cout << "\n2. Binary Search Algorithm:" << std::endl;
-    find_faulty_station_binary();
-    
-    // Performance Analysis
-    print_performance_analysis();
-}
-
-std::string Algo::find_faulty_station_binary()
-{
-   if (stations.empty()) return "";
-
-    std::vector<Station> sorted_stations = stations;
-    std::stable_sort(sorted_stations.begin(), sorted_stations.end(),
-                     [](const Station& a, const Station& b) {
-                         return a.faulty < b.faulty;
-                     });
-
-    int left = 0;
-    int right = (int)sorted_stations.size() - 1;
-
-    while (left < right) {
-        int mid = left + (right - left) / 2;
-        if (sorted_stations[mid].faulty) {
-            right = mid;
-        } else {
-            left = mid + 1;
-        }
-    }
-
-    if (sorted_stations[left].faulty) {
-        return sorted_stations[left].name; // return name instead of index
-    }
-    return "";
-}
-
-void Algo::print_performance_analysis()
-{
-    std::cout << "\n=== PERFORMANCE ANALYSIS ===" << std::endl;
-    std::cout << "Total stations: " << stations.size() << std::endl;
-    std::cout << "\nAlgorithm Comparison:" << std::endl;
-    
-    std::cout << "\n2. Binary Search:" << std::endl;
-    std::cout << "   - Time Complexity: O(log n) + O(n log n) for sorting" << std::endl;
-    std::cout << "   - Space Complexity: O(n) for sorted copy" << std::endl;
-    std::cout << "   - Best Case: O(log n) - if data is pre-sorted" << std::endl;
-    std::cout << "   - Worst Case: O(n log n) - due to sorting requirement" << std::endl;
-    std::cout << "   - Note: Binary search is not optimal for this problem since" << std::endl;
-    std::cout << "     we're searching for a boolean property, not a sorted value" << std::endl;
-    
-    std::cout << "\nRecommendation:" << std::endl;
-    std::cout << "For this specific problem, Linear Search is more efficient" << std::endl;
-    std::cout << "because we're looking for a boolean property (faulty/not faulty)" << std::endl;
-    std::cout << "rather than searching for a specific value in a sorted array." << std::endl;
-}
-
-void Algo::benchmark_find_faulty_station_binary(std::string file_Path, int iterations)
-{
-    using namespace std::chrono;
-    long long total_comparisons = 0;
-    // First load the stations from file
-    initialize_stations_from_file(file_Path);
-    
-    // Now check if stations were actually loaded
-    if (stations.empty()) {
-        std::cout << "No stations available for benchmarking. File: " << file_Path << std::endl;
-        return;
-    }
-
-    nanoseconds total_time(0);
-    
-    for (int t = 0; t < iterations; ++t) {
-        // Reset all stations to not faulty for this iteration
-        reset();
-        
-        // Mark one random station as faulty
-        generateStationsWithThreshold(stations, static_cast<int>(stations.size()));
-
-        int compare_count = 0;
-        auto start = high_resolution_clock::now();
-        int index = find_faulty_station_threshold(compare_count);
-        auto end = high_resolution_clock::now();
-
-        total_time += duration_cast<nanoseconds>(end - start);
-        total_comparisons += compare_count;
-    }
-
-    // Benchmark and print out the stats
-    double avg_ns = static_cast<double>(total_time.count()) / iterations;
-    // Average comparisons
-    double avg_comparisons = static_cast<double>(total_comparisons) / iterations;
-    std::cout << "Benchmark results for: " << file_Path << "\n";
-    std::cout << "Stations count: " << stations.size() << "\n";
-    std::cout << "Iterations: " << iterations << "\n";
-    std::cout << "Avg time: " << avg_ns << " ns"
-              << " (" << (avg_ns / 1000.0) << " µs, "
-              << (avg_ns / 1e6) << " ms)" << std::endl;
-    std::cout << "Avg comparisons: " << avg_comparisons << "\n";
-    std::cout << "Expected max comparisons (log2 n): "
-            << std::ceil(std::log2(stations.size())) << "\n";
-}
-
-void Algo::initialize_stations_from_file(const std::string& filename)
-{
-    std::ifstream file(filename);
+    std::ifstream file(file_path);
     if (!file.is_open()) {
-        std::cerr << "Cannot open file: " << filename << "\n";
+        std::cerr << "Failed to open file: " << file_path << std::endl;
         return;
     }
 
@@ -266,100 +12,195 @@ void Algo::initialize_stations_from_file(const std::string& filename)
     std::string line;
 
     while (std::getline(file, line)) {
-        // Trim spaces at start and end
-        line.erase(0, line.find_first_not_of(" \t\r\n"));
-        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+        Station s;
+        s.name = line;
+        s.faulty = false;
 
-        if (line.empty()) continue; // skip empty lines
+        // Parse ID from the line
+        size_t underscorePos = line.find('_');
+        if (underscorePos != std::string::npos) {
+            s.id = std::stoi(line.substr(underscorePos + 1));
+        } else {
+            s.id = 1; // fallback
+        }
 
-        stations.push_back({ line, false }); // all stations not faulty
+        stations.push_back(s);
     }
 
     file.close();
 }
 
-void Algo::generate_large_station_list(int count, std::string &fileName)
+
+int Algo::setRandomFaultyStation()
 {
-     std::ofstream out(fileName);
-    if (!out.is_open()) {
-        std::cerr << "Failed to open file: " << fileName << std::endl;
+ if (stations.size() < 2) return -1; // Need at least 2 stations
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(0, stations.size() - 2); // avoid last
+
+    int index = dist(gen);
+
+    int baseID = stations[index].id;
+    int nextID = stations[index + 1].id;
+
+    int targetID;
+
+    if (nextID - baseID > 1) {
+        // There is a gap; pick a random number in-between
+        std::uniform_int_distribution<> offsetDist(1, nextID - baseID - 1);
+        int offset = offsetDist(gen);
+        targetID = baseID + offset;
+    } else {
+        // No gap; fallback to picking a station ID (will be found in 1 probe)
+        targetID = baseID;
+    }
+
+    std::cout << "Generated hard target ID: " << targetID 
+              << " (between " << baseID << " and " << nextID << ")\n";
+
+    return targetID;
+}
+
+int Algo::interpolationSearch(int64_t targetID, int& probes)
+{
+    int low = 0;
+    int high = stations.size() - 1;
+    probes = 0;
+
+    while (low <= high && targetID >= stations[low].id && targetID <= stations[high].id) {
+        ++probes;
+
+        if (low == high) {
+            if (stations[low].id == targetID) return low;
+            return -1;
+        }
+
+        int pos = low + (int)((double)(targetID - stations[low].id) * (high - low) /
+                              (stations[high].id - stations[low].id));
+
+        if (stations[pos].id == targetID)
+            return pos;
+        else if (stations[pos].id < targetID)
+            low = pos + 1;
+        else
+            high = pos - 1;
+    }
+
+    return -1;
+}
+
+void Algo::benchmarkInterpolationSearch(int targetID)
+{
+    int probes = 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int pos = interpolationSearch(targetID, probes);
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::micro> duration = end - start;
+
+    std::cout << "----- Interpolation Search Benchmark -----" << std::endl;
+    std::cout << "Array size: " << stations.size() << std::endl;
+    std::cout << "Target station ID: " << targetID << std::endl;
+
+    if (pos != -1)
+        std::cout << "Found at index: " << pos << std::endl;
+    else
+        std::cout << "Station not found." << std::endl;
+
+    std::cout << "Probes/iterations: " << probes << std::endl;
+    std::cout << "Time taken: " << duration.count() << " microseconds" << std::endl;
+    std::cout << "-----------------------------------------" << std::endl;
+}
+
+void  Algo::generateNonUniformStations(const std::string& filepath, int numStations, int minGap, int maxGap) {
+    std::ofstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for writing: " << filepath << std::endl;
         return;
     }
 
-    for (size_t i = 0; i < count; ++i) {
-        Station s;
-        s.name = "Station" + std::to_string(i);
-        s.faulty = false;
-
-        // Write as "StationName false"
-        out << s.name << " " << (s.faulty ? "true" : "false") << "\n";
-    }
-
-    out.close();
-    std::cout << "Generated " << count << " stations into " << fileName << std::endl;
-}
-
-void Algo::generateStationsWithThreshold(std::vector<Station> &stations, int numStations)
-{
-    stations.clear();
-    stations.reserve(numStations);
-
-    // Fill stations with names and all false
-    for (int i = 0; i < numStations; ++i) {
-        stations.push_back({ "Station" + std::to_string(i), false });
-    }
-
-    // Pick a random threshold index
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, numStations - 1);
-    int threshold = dis(gen);
+    std::uniform_int_distribution<> gapDist(minGap, maxGap); // random gap between consecutive stations
 
-    // Mark all stations from threshold onward as faulty
-    for (int i = threshold; i < numStations; ++i) {
-        stations[i].faulty = true;
+    int currentID = 1;
+
+    for (int i = 0; i < numStations; ++i) {
+        file << "Station_" << currentID << std::endl; // write station name
+        int gap = (i % 2 == 0) ? maxGap * 10000 : gapDist(gen);
+        currentID += gap; // update currentID
     }
 
-    std::cout << "Threshold index: " << threshold << " (" << stations[threshold].name << ")\n";
+    file.close();
+    std::cout << "Generated " << numStations << " non-uniform stations in " << filepath << std::endl;
 }
 
-int Algo::find_faulty_station_threshold(int& comparisons)
+void Algo::generateHighlyNonUniformStations(const std::string &filepath, int numStations)
 {
-    int left = 0;
-    int right = static_cast<int>(stations.size()) - 1; // vector size is size_t, cast to int
-    int result = -1; // stores index of first faulty station
-    comparisons = 0;
-
-    while (left <= right) {
-        int mid = left + (right - left) / 2;
-        comparisons++; // counting the mid check
-        if (stations[mid].faulty) {
-            // Possible first faulty station
-            result = mid;
-            // Look left to find an earlier faulty
-            right = mid - 1;
-        } else {
-            // No fault here, move right
-            left = mid + 1;
-        }
+    std::ofstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filepath << std::endl;
+        return;
     }
 
-    return result; // -1 if no faulty station
+    std::random_device rd;
+    std::mt19937_64 gen(rd()); // 64-bit RNG
+    std::uniform_int_distribution<int64_t> tinyGap(1, 5);
+    std::uniform_int_distribution<int64_t> mediumGap(50, 200);
+    std::uniform_int_distribution<int64_t> hugeGap(5000, 20000);
+
+    int64_t currentID = 1;
+
+    for (int i = 0; i < numStations; ++i) {
+        file << "Station_" << currentID << std::endl;
+
+        // Use highly irregular gaps
+        if (i % 10 == 0)
+            currentID += hugeGap(gen);
+        else if (i % 3 == 0)
+            currentID += mediumGap(gen);
+        else
+            currentID += tinyGap(gen);
+    }
+
+    file.close();
+    std::cout << "Generated " << numStations << " highly non-uniform stations in "
+              << filepath << std::endl;
 }
 
-void Algo::print_stations()
+int64_t Algo::generateHardTarget()
 {
-    for (const auto& station : stations)
-    {
-        std::cout << "Station Name: " << station.name 
-                  << ", Faulty: " << (station.faulty ? "Yes" : "No") << std::endl;
+    if (stations.size() < 2) return -1;
+
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+
+    // Find a random gap big enough
+    std::vector<int> candidateIndices;
+    const int64_t minGap = 50; // minimum gap to generate a “hard target”
+
+    for (size_t i = 0; i < stations.size() - 1; ++i) {
+        if (stations[i + 1].id - stations[i].id > minGap)
+            candidateIndices.push_back(i);
     }
-    std::cout << "Total stations: " << stations.size() << std::endl;
+
+    if (candidateIndices.empty()) return stations[stations.size()/2].id;
+
+    std::uniform_int_distribution<> dist(0, candidateIndices.size() - 1);
+    int idx = candidateIndices[dist(gen)];
+
+    int64_t baseID = stations[idx].id;
+    int64_t nextID = stations[idx + 1].id;
+
+    std::uniform_int_distribution<int64_t> offsetDist(1, nextID - baseID - 1);
+    int64_t targetID = baseID + offsetDist(gen);
+
+    std::cout << "Generated hard target ID: " << targetID
+              << " (between " << baseID << " and " << nextID << ")\n";
+
+    return targetID;
 }
 
-void Algo::reset()
-{
-    for (auto& station : stations) {
-        station.faulty = false;
-    }
-}
+
