@@ -1,206 +1,225 @@
 #include "algo.hpp"
 
-void Algo::loadStations(std::string file_path)
+// Helper to convert preference lists (best first) to rank maps (1 = best)
+void GaleShapleyAlgorithm::convertPrefsToRanks(
+    const std::map<std::string, std::vector<std::string>>& prefs,
+    std::map<std::string, std::map<std::string, int>>& ranks,
+    const std::vector<std::string>& all_partners)
 {
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << file_path << std::endl;
-        return;
+    for (const auto& pair : prefs) {
+        const std::string& entity = pair.first;
+        const std::vector<std::string>& pref_list = pair.second;
+        for (size_t i = 0; i < pref_list.size(); ++i) {
+            ranks[entity][pref_list[i]] = i + 1; // Rank 1 is best
+        }
+    }
+}
+
+void GaleShapleyAlgorithm::initializeData() {
+    // 5 Platforms and 5 Restaurants (The size must be equal for a complete matching in G-S)
+    platforms = { "GrabFood", "Foodpanda", "Deliveroo", "WhyQ", "Oddle" };
+    restaurants = { "PastaExpress_Orchard", "ChiliCrab_Marina", "BakKutTeh_Chinatown",
+                      "ChickenRice_Bugis", "LaksaKing_Katong" };
+
+    // Initialize next proposal index for all platforms to 0
+    for (const auto& platform : platforms) {
+        next_proposal_index[platform] = 0;
     }
 
-    stations.clear();
-    std::string line;
+    // --- PLATFORM PREFERENCE LISTS (best first) ---
+    std::map<std::string, std::vector<std::string>> platform_prefs = {
+        {"GrabFood", {"ChiliCrab_Marina", "PastaExpress_Orchard", "LaksaKing_Katong", "ChickenRice_Bugis", "BakKutTeh_Chinatown"}},
+        {"Foodpanda", {"PastaExpress_Orchard", "ChiliCrab_Marina", "ChickenRice_Bugis", "LaksaKing_Katong", "BakKutTeh_Chinatown"}},
+        {"Deliveroo", {"LaksaKing_Katong", "PastaExpress_Orchard", "ChiliCrab_Marina", "ChickenRice_Bugis", "BakKutTeh_Chinatown"}},
+        {"WhyQ", {"ChickenRice_Bugis", "BakKutTeh_Chinatown", "LaksaKing_Katong", "ChiliCrab_Marina", "PastaExpress_Orchard"}},
+        {"Oddle", {"BakKutTeh_Chinatown", "ChickenRice_Bugis", "LaksaKing_Katong", "PastaExpress_Orchard", "ChiliCrab_Marina"}}
+    };
+    convertPrefsToRanks(platform_prefs, platform_ranks, restaurants);
 
-    while (std::getline(file, line)) {
-        Station s;
-        s.name = line;
-        s.faulty = false;
+    // --- RESTAURANT PREFERENCE LISTS (best first) ---
+    std::map<std::string, std::vector<std::string>> restaurant_prefs = {
+        {"PastaExpress_Orchard", {"Deliveroo", "GrabFood", "Foodpanda", "Oddle", "WhyQ"}},
+        {"ChiliCrab_Marina", {"GrabFood", "Foodpanda", "Deliveroo", "WhyQ", "Oddle"}},
+        {"BakKutTeh_Chinatown", {"WhyQ", "Oddle", "GrabFood", "Foodpanda", "Deliveroo"}},
+        {"ChickenRice_Bugis", {"Foodpanda", "GrabFood", "WhyQ", "Deliveroo", "Oddle"}},
+        {"LaksaKing_Katong", {"GrabFood", "Deliveroo", "Foodpanda", "WhyQ", "Oddle"}}
+    };
+    convertPrefsToRanks(restaurant_prefs, restaurant_ranks, platforms);
+}
 
-        // Parse ID from the line
-        size_t underscorePos = line.find('_');
-        if (underscorePos != std::string::npos) {
-            s.id = std::stoi(line.substr(underscorePos + 1));
-        } else {
-            s.id = 1; // fallback
+// New method to display preference lists
+void GaleShapleyAlgorithm::displayPreferences() {
+    std::cout << "\n=== INITIAL PREFERENCE LISTS (Rank 1 = Best) ===" << std::endl;
+
+    // P-Side Preferences
+    std::cout << "\n--- PLATFORM PREFERENCES ---" << std::endl;
+    for (const auto& platform : platforms) {
+        std::cout << std::left << std::setw(12) << platform << ": ";
+        std::vector<std::pair<int, std::string>> sorted_prefs;
+        for (const auto& pair : platform_ranks[platform]) {
+            sorted_prefs.push_back({ pair.second, pair.first });
+        }
+        std::sort(sorted_prefs.begin(), sorted_prefs.end());
+
+        for (const auto& pair : sorted_prefs) {
+            std::cout << pair.first << "(" << pair.second << "), ";
+        }
+        std::cout << std::endl;
+    }
+
+    // R-Side Preferences
+    std::cout << "\n--- RESTAURANT PREFERENCES ---" << std::endl;
+    for (const auto& restaurant : restaurants) {
+        std::cout << std::left << std::setw(25) << restaurant << ": ";
+        std::vector<std::pair<int, std::string>> sorted_prefs;
+        for (const auto& pair : restaurant_ranks[restaurant]) {
+            sorted_prefs.push_back({ pair.second, pair.first });
+        }
+        std::sort(sorted_prefs.begin(), sorted_prefs.end());
+
+        for (const auto& pair : sorted_prefs) {
+            std::cout << pair.first << "(" << pair.second << "), ";
+        }
+        std::cout << "\n" << std::endl;
+    }
+    std::cout << std::string(70, '-') << std::endl;
+}
+
+// --- CORE GALE-SHAPLEY IMPLEMENTATION ---
+void GaleShapleyAlgorithm::runGaleShapleyAlgorithm() {
+
+    // Clear matches and reset proposal state
+    current_matches.clear();
+    std::set<std::string> free_platforms;
+    for (const auto& p : platforms) {
+        free_platforms.insert(p);
+        next_proposal_index[p] = 0; // Reset index to the first restaurant
+    }
+
+    int total_proposals = 0;
+
+    std::cout << "=== GALE-SHAPLEY ALGORITHM (Platform-Proposing) ===" << std::endl;
+    std::cout << "Phase 1: Sequential Proposals and Engagements" << std::endl;
+    std::cout << std::string(70, '-') << std::endl;
+
+    while (!free_platforms.empty()) {
+        std::string proposer = *free_platforms.begin(); // Get a free platform
+
+        // Find the restaurant corresponding to the current rank index
+        std::string restaurant_to_propose_to = "";
+        int target_rank = next_proposal_index[proposer] + 1;
+        for (const auto& res : restaurants) {
+            if (platform_ranks[proposer][res] == target_rank) {
+                restaurant_to_propose_to = res;
+                break;
+            }
         }
 
-        stations.push_back(s);
-    }
-
-    file.close();
-}
-
-
-int Algo::setRandomFaultyStation()
-{
- if (stations.size() < 2) return -1; // Need at least 2 stations
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(0, stations.size() - 2); // avoid last
-
-    int index = dist(gen);
-
-    int baseID = stations[index].id;
-    int nextID = stations[index + 1].id;
-
-    int targetID;
-
-    if (nextID - baseID > 1) {
-        // There is a gap; pick a random number in-between
-        std::uniform_int_distribution<> offsetDist(1, nextID - baseID - 1);
-        int offset = offsetDist(gen);
-        targetID = baseID + offset;
-    } else {
-        // No gap; fallback to picking a station ID (will be found in 1 probe)
-        targetID = baseID;
-    }
-
-    std::cout << "Generated hard target ID: " << targetID 
-              << " (between " << baseID << " and " << nextID << ")\n";
-
-    return targetID;
-}
-
-int Algo::interpolationSearch(int64_t targetID, int& probes)
-{
-    int low = 0;
-    int high = stations.size() - 1;
-    probes = 0;
-
-    while (low <= high && targetID >= stations[low].id && targetID <= stations[high].id) {
-        ++probes;
-
-        if (low == high) {
-            if (stations[low].id == targetID) return low;
-            return -1;
+        if (restaurant_to_propose_to.empty()) {
+            // Platform has proposed to everyone, remove from free list
+            free_platforms.erase(proposer);
+            continue;
         }
 
-        int pos = low + (int)((double)(targetID - stations[low].id) * (high - low) /
-                              (stations[high].id - stations[low].id));
+        total_proposals++;
+        std::cout << "  " << proposer << " proposes to " << restaurant_to_propose_to << std::endl;
 
-        if (stations[pos].id == targetID)
-            return pos;
-        else if (stations[pos].id < targetID)
-            low = pos + 1;
-        else
-            high = pos - 1;
+        // 1. Check if the restaurant is free
+        if (current_matches.find(restaurant_to_propose_to) == current_matches.end()) {
+            // R is free, P and R become engaged
+            current_matches[restaurant_to_propose_to] = proposer;
+            free_platforms.erase(proposer);
+            std::cout << "    Match! " << restaurant_to_propose_to << " is free and accepts." << std::endl;
+        }
+        // 2. R is engaged to P' (current_partner)
+        else {
+            std::string current_partner = current_matches[restaurant_to_propose_to];
+
+            // Check if R prefers P (proposer) to P' (current_partner)
+            int proposer_rank = restaurant_ranks[restaurant_to_propose_to][proposer];
+            int current_partner_rank = restaurant_ranks[restaurant_to_propose_to][current_partner];
+
+            if (proposer_rank < current_partner_rank) {
+                // R prefers P to P', breaks engagement with P'
+                current_matches[restaurant_to_propose_to] = proposer; // P and R engaged
+                free_platforms.erase(proposer); // P is no longer free
+                free_platforms.insert(current_partner); // P' becomes free
+                std::cout << "    Rejection: " << restaurant_to_propose_to
+                    << " rejects " << current_partner << " for better offer from " << proposer << std::endl;
+            }
+            else {
+                // R prefers P' (current_partner) to P (proposer), P remains free
+                std::cout << "    Rejection: " << restaurant_to_propose_to
+                    << " rejects " << proposer << " and stays with " << current_partner << std::endl;
+            }
+        }
+
+        // P has made a proposal, increment its proposal index for the next round
+        next_proposal_index[proposer]++;
     }
 
-    return -1;
+    std::cout << "\nPhase 2: Final Match Summary" << std::endl;
+    std::cout << "Total Proposals Made: " << total_proposals << std::endl;
+    std::cout << std::string(70, '=') << std::endl;
 }
 
-void Algo::benchmarkInterpolationSearch(int targetID)
-{
-    int probes = 0;
+// Helper to check for stability (no blocking pairs)
+bool GaleShapleyAlgorithm::isStable() {
+    // ... (Stability logic remains the same)
+    int blocking_pairs = 0;
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int pos = interpolationSearch(targetID, probes);
-    auto end = std::chrono::high_resolution_clock::now();
+    for (const auto& platform : platforms) {
+        std::string current_match_r = "";
+        for (const auto& pair : current_matches) {
+            if (pair.second == platform) {
+                current_match_r = pair.first;
+                break;
+            }
+        }
 
-    std::chrono::duration<double, std::micro> duration = end - start;
+        for (const auto& restaurant : restaurants) {
+            std::string current_match_p = current_matches.at(restaurant);
 
-    std::cout << "----- Interpolation Search Benchmark -----" << std::endl;
-    std::cout << "Array size: " << stations.size() << std::endl;
-    std::cout << "Target station ID: " << targetID << std::endl;
+            // Platform P prefers R to its current partner (current_match_r)
+            bool P_prefers_R;
+            if (current_match_r.empty() || current_match_r == restaurant) {
+                P_prefers_R = false; // Already matched to R, or any match is not better than itself
+            }
+            else {
+                int R_rank = platform_ranks[platform][restaurant];
+                int current_R_rank = platform_ranks[platform][current_match_r];
+                P_prefers_R = (R_rank < current_R_rank);
+            }
 
-    if (pos != -1)
-        std::cout << "Found at index: " << pos << std::endl;
-    else
-        std::cout << "Station not found." << std::endl;
+            // Restaurant R prefers P to its current partner (current_match_p)
+            bool R_prefers_P;
+            if (current_match_p.empty() || current_match_p == platform) {
+                R_prefers_P = false; // Already matched to P, or any match is not better than itself
+            }
+            else {
+                int P_rank = restaurant_ranks[restaurant][platform];
+                int current_P_rank = restaurant_ranks[restaurant][current_match_p];
+                R_prefers_P = (P_rank < current_P_rank);
+            }
 
-    std::cout << "Probes/iterations: " << probes << std::endl;
-    std::cout << "Time taken: " << duration.count() << " microseconds" << std::endl;
-    std::cout << "-----------------------------------------" << std::endl;
+            if (P_prefers_R && R_prefers_P) {
+                blocking_pairs++;
+            }
+        }
+    }
+
+    return blocking_pairs == 0;
 }
 
-void  Algo::generateNonUniformStations(const std::string& filepath, int numStations, int minGap, int maxGap) {
-    std::ofstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file for writing: " << filepath << std::endl;
-        return;
+// Setters for test manipulation (no changes needed)
+void GaleShapleyAlgorithm::swapPlatformPreferences(const std::string& platform, const std::string& resA, const std::string& resB) {
+    if (platform_ranks.count(platform) && platform_ranks[platform].count(resA) && platform_ranks[platform].count(resB)) {
+        std::swap(platform_ranks[platform][resA], platform_ranks[platform][resB]);
     }
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> gapDist(minGap, maxGap); // random gap between consecutive stations
-
-    int currentID = 1;
-
-    for (int i = 0; i < numStations; ++i) {
-        file << "Station_" << currentID << std::endl; // write station name
-        int gap = (i % 2 == 0) ? maxGap * 10000 : gapDist(gen);
-        currentID += gap; // update currentID
-    }
-
-    file.close();
-    std::cout << "Generated " << numStations << " non-uniform stations in " << filepath << std::endl;
 }
 
-void Algo::generateHighlyNonUniformStations(const std::string &filepath, int numStations)
-{
-    std::ofstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filepath << std::endl;
-        return;
+void GaleShapleyAlgorithm::swapRestaurantPreferences(const std::string& restaurant, const std::string& platA, const std::string& platB) {
+    if (restaurant_ranks.count(restaurant) && restaurant_ranks[restaurant].count(platA) && restaurant_ranks[restaurant].count(platB)) {
+        std::swap(restaurant_ranks[restaurant][platA], restaurant_ranks[restaurant][platB]);
     }
-
-    std::random_device rd;
-    std::mt19937_64 gen(rd()); // 64-bit RNG
-    std::uniform_int_distribution<int64_t> tinyGap(1, 5);
-    std::uniform_int_distribution<int64_t> mediumGap(50, 200);
-    std::uniform_int_distribution<int64_t> hugeGap(5000, 20000);
-
-    int64_t currentID = 1;
-
-    for (int i = 0; i < numStations; ++i) {
-        file << "Station_" << currentID << std::endl;
-
-        // Use highly irregular gaps
-        if (i % 10 == 0)
-            currentID += hugeGap(gen);
-        else if (i % 3 == 0)
-            currentID += mediumGap(gen);
-        else
-            currentID += tinyGap(gen);
-    }
-
-    file.close();
-    std::cout << "Generated " << numStations << " highly non-uniform stations in "
-              << filepath << std::endl;
 }
-
-int64_t Algo::generateHardTarget()
-{
-    if (stations.size() < 2) return -1;
-
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-
-    // Find a random gap big enough
-    std::vector<int> candidateIndices;
-    const int64_t minGap = 50; // minimum gap to generate a “hard target”
-
-    for (size_t i = 0; i < stations.size() - 1; ++i) {
-        if (stations[i + 1].id - stations[i].id > minGap)
-            candidateIndices.push_back(i);
-    }
-
-    if (candidateIndices.empty()) return stations[stations.size()/2].id;
-
-    std::uniform_int_distribution<> dist(0, candidateIndices.size() - 1);
-    int idx = candidateIndices[dist(gen)];
-
-    int64_t baseID = stations[idx].id;
-    int64_t nextID = stations[idx + 1].id;
-
-    std::uniform_int_distribution<int64_t> offsetDist(1, nextID - baseID - 1);
-    int64_t targetID = baseID + offsetDist(gen);
-
-    std::cout << "Generated hard target ID: " << targetID
-              << " (between " << baseID << " and " << nextID << ")\n";
-
-    return targetID;
-}
-
-
