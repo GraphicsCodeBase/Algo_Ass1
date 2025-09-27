@@ -114,28 +114,21 @@ void Algo::benchmarkInterpolationSearch(int targetID)
     std::cout << "-----------------------------------------" << std::endl;
 }
 
-void  Algo::generateNonUniformStations(const std::string& filepath, int numStations, int minGap, int maxGap) {
+void Algo::generateSequentialStations(const std::string& filepath, int limit) {
     std::ofstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Failed to open file for writing: " << filepath << std::endl;
         return;
     }
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> gapDist(minGap, maxGap); // random gap between consecutive stations
-
-    int currentID = 1;
-
-    for (int i = 0; i < numStations; ++i) {
-        file << "Station_" << currentID << std::endl; // write station name
-        int gap = (i % 2 == 0) ? maxGap * 10000 : gapDist(gen);
-        currentID += gap; // update currentID
+    for (int id = 1; id <= limit; ++id) {
+        file << "Station_" << id << std::endl; // write station name
     }
 
     file.close();
-    std::cout << "Generated " << numStations << " non-uniform stations in " << filepath << std::endl;
+    std::cout << "Generated stations from 1 to " << limit << " in " << filepath << std::endl;
 }
+
 
 void Algo::generateHighlyNonUniformStations(const std::string &filepath, int numStations)
 {
@@ -203,4 +196,41 @@ int64_t Algo::generateHardTarget()
     return targetID;
 }
 
+int64_t Algo::generateHardExistingTarget()
+{
+    if (stations.empty()) return -1;
 
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+
+    // Pick one of the first or last 5% of stations
+    size_t range = stations.size() / 20; // 5%
+    std::uniform_int_distribution<size_t> dist(0, range - 1);
+
+    bool pickStart = (gen() % 2 == 0);
+    size_t idx = pickStart ? dist(gen) : stations.size() - 1 - dist(gen);
+
+    int64_t targetID = stations[idx].id;
+
+    std::cout << "Generated hard-but-existing target: " << targetID
+              << " at index " << idx << "\n";
+
+    return targetID;
+}
+
+int64_t Algo::pickTargetFromStations()
+{
+    if (stations.empty()) return -1;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> dist(0, stations.size() - 1);
+
+    size_t idx = dist(gen);
+    return stations[idx].id; // Guaranteed to exist
+}
+
+void Algo::clearStations()
+{
+    stations.clear();
+}

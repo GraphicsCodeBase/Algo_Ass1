@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <vector>
 #include <random>
 #include <algorithm>
@@ -20,9 +20,13 @@ class Algo {
     int setRandomFaultyStation();
     int interpolationSearch(int64_t targetID, int& probes);
     void benchmarkInterpolationSearch(int targetID);
-    void generateNonUniformStations(const std::string& filepath, int numStations, int minGap = 1, int maxGap = 50);
-    void generateHighlyNonUniformStations(const std::string& filepath, int numStations);
+    //void generateNonUniformStations(const std::string& filepath, int numStations, int minGap = 1, int maxGap = 50);
+    void generateSequentialStations(const std::string& filepath, int limit);
+    void generateHighlyNonUniformStations(const std::string &filepath, int numStations);
     int64_t generateHardTarget();
+    int64_t generateHardExistingTarget();
+    int64_t pickTargetFromStations();
+    void clearStations();
     private:
     //holding the list of stations.
     std::vector<Station> stations;

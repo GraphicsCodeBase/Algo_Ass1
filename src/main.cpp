@@ -3,26 +3,84 @@
 #include "algo.hpp"
 #include "bucket_sort.hpp"
 //file path to the txt files.
-std::string japan_station_file = "../../src/japan_station.txt";
-std::string singapore_station_file = "../../src/singapore_station.txt";
-std::string onemillion_station_file = "../../src/OneMillion.txt";
-std::string one_thousand_station_file = "../../src/OneThousand.txt";
-std::string ten_station_file = "../../src/ten_Stations.txt";
-std::string hundred_station_file = "../../src/hundred_Stations.txt";
 std::string random_station_file = "../../src/randomStations.txt";
-std::string thousand_numbers_file = "../../../src/thousand.txt";
-
+std::string thousand_numbers_file = "../../src/thousand.txt";
+//hundred entries
+std::string hundred_Uniform_file = "../../src/hundred_Uniform.txt";
+std::string hundred_NonUniform_file = "../../src/hundred_NonUniform.txt";
+//thousand entries.
+std::string thousand_Uniform_file = "../../src/thousand_uniform.txt";
+std::string thousand_NonUniform_file = "../../src/thousand_nonUniform.txt";
+//ten thousand entries.
+std::string ten_thousand_Uniform_file = "../../src/ten_thousand_uniform.txt";
+std::string ten_thousand_NonUniform_file = "../../src/ten_thousand_nonUniform.txt";
 int main() {
     Algo algo;
-    // Load stations from file
-    algo.generateHighlyNonUniformStations(random_station_file,1000000);
-    algo.loadStations("../../src/randomStations.txt");
+    int targetID = 0;
+    // ===== INTERPOLATION SEARCH TESTING =====
+    std::cout << "\n\n1. INTERPOLATION SEARCH TESTING" << std::endl;
+    std::cout << "======================" << std::endl;
+
+    //Test for 100 sequential entries
+    algo.loadStations(hundred_Uniform_file);
     // Set a random faulty station
-    int targetID = algo.generateHardTarget();
-    
+    targetID = algo.pickTargetFromStations();
     std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
     algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
 
+    //Test for 100 non-uniform entries
+    algo.loadStations(hundred_NonUniform_file);
+    // Set a random faulty station
+    targetID = algo.pickTargetFromStations();
+    std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
+    algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
+
+    //Test for 1000 non-uniform entries
+    algo.loadStations(thousand_Uniform_file);
+    // Set a random faulty station
+    targetID = algo.pickTargetFromStations();
+    std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
+    algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
+
+    //Test for 1000 non-uniform entries
+    algo.loadStations(thousand_NonUniform_file);
+    // Set a random faulty station
+    targetID = algo.pickTargetFromStations();
+    std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
+    algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
+
+     //Test for 10000 non-uniform entries
+    algo.loadStations(ten_thousand_Uniform_file);
+    // Set a random faulty station
+    targetID = algo.pickTargetFromStations();
+    std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
+    algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
+
+     //Test for 10000 non-uniform entries
+    algo.loadStations(ten_thousand_NonUniform_file);
+    // Set a random faulty station
+    targetID = algo.pickTargetFromStations();
+    std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
+    algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
+
+    //Test for 1000000 non-uniform entries
+    algo.loadStations(random_station_file);
+    // Set a random faulty station
+    targetID = algo.pickTargetFromStations();
+    std::cout << "Benchmarking Interpolation Search for target ID: " << targetID << std::endl;
+    algo.benchmarkInterpolationSearch(targetID);  
+    algo.clearStations();
+    std::cout << "======================" << std::endl;
+    std::cout << "INTERPOLATION SEARCH TESTING END" << std::endl;
+    std::cout << "======================" << std::endl;
+
+   // ===== INTERPOLATION SEARCH TESTING END =====
 
     // ===== BUCKET SORT TESTING =====
     std::cout << "\n\n2. BUCKET SORT TESTING" << std::endl;
