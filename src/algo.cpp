@@ -1,6 +1,6 @@
 #include "algo.hpp"
 
-// Helper to convert preference lists (best first) to rank maps (1 = best)
+// Preference lists (best first) to rank maps (1 = best)
 void GaleShapleyAlgorithm::convertPrefsToRanks(
     const std::map<std::string, std::vector<std::string>>& prefs,
     std::map<std::string, std::map<std::string, int>>& ranks,
@@ -47,7 +47,7 @@ void GaleShapleyAlgorithm::initializeData() {
     convertPrefsToRanks(restaurant_prefs, restaurant_ranks, platforms);
 }
 
-// New method to display preference lists
+// Display preference lists
 void GaleShapleyAlgorithm::displayPreferences() {
     std::cout << "\n=== INITIAL PREFERENCE LISTS (Rank 1 = Best) ===" << std::endl;
 
@@ -212,7 +212,7 @@ bool GaleShapleyAlgorithm::isStable() {
     return true;
 }
 
-// Setters for test manipulation (no changes needed)
+// Setters for test manipulation
 void GaleShapleyAlgorithm::swapPlatformPreferences(const std::string& platform, const std::string& resA, const std::string& resB) {
     if (platform_ranks.count(platform) && platform_ranks[platform].count(resA) && platform_ranks[platform].count(resB)) {
         std::swap(platform_ranks[platform][resA], platform_ranks[platform][resB]);
