@@ -16,6 +16,7 @@ struct Station{
 class Algo {
     public :
     //interpolation search functions 
+    //===============================
     void loadStations(std::string file_path);
     int setRandomFaultyStation();
     int interpolationSearch(int64_t targetID, int& probes);
@@ -27,6 +28,12 @@ class Algo {
     int64_t generateHardExistingTarget();
     int64_t pickTargetFromStations();
     void clearStations();
+
+    //Recursive Subset Sum Count (Exponential) functions.
+    //===================================================
+    int countSubsets(const std::vector<int>& arr, int n, int sum, int& probes);
+    void benchmarkSubsetSum(const std::vector<int>& arr, int targetSum);
+
     private:
     //holding the list of stations.
     std::vector<Station> stations;

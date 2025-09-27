@@ -234,3 +234,38 @@ void Algo::clearStations()
 {
     stations.clear();
 }
+//===================================================
+//Recursive Subset Sum Count (Exponential) functions.
+//===================================================
+int Algo::countSubsets(const std::vector<int> &arr, int n, int sum, int& probes)
+{
+   ++probes;  // count every recursive call as a probe
+
+    if (sum == 0) return 1;  // found a valid subset
+    if (n == 0) return 0;    // no elements left
+
+    if (arr[n-1] > sum)
+        return countSubsets(arr, n-1, sum, probes);  // skip current element
+
+    // include or exclude the current element
+    return countSubsets(arr, n-1, sum, probes) + 
+           countSubsets(arr, n-1, sum - arr[n-1], probes);
+}
+
+void Algo::benchmarkSubsetSum(const std::vector<int>& arr, int targetSum) {
+    int probes = 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    int count = countSubsets(arr, arr.size(), targetSum, probes);
+    auto end = std::chrono::high_resolution_clock::now();
+
+    double time_taken = std::chrono::duration<double, std::micro>(end - start).count();
+
+    std::cout << "----- Subset Sum Benchmark -----\n";
+    std::cout << "Array size: " << arr.size() << "\n";
+    std::cout << "Target sum: " << targetSum << "\n";
+    std::cout << "Number of subsets: " << count << "\n";
+    std::cout << "Probes (recursive calls): " << probes << "\n";
+    std::cout << "Time taken: " << time_taken << " microseconds\n";
+    std::cout << "--------------------------------\n";
+}

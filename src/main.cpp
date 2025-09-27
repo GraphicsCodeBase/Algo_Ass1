@@ -81,6 +81,20 @@ int main() {
     std::cout << "======================" << std::endl;
 
    // ===== INTERPOLATION SEARCH TESTING END =====
+    std::cout << "\nRecursive Subset Sum Count Testing" << std::endl;
+    std::vector<int> arr1 = {1, 2, 3, 4, 5};
+    std::vector<int> arr2 = {2, 3, 5, 6, 8, 10};
+    std::vector<int> arr3 = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int> arr4 = {1, 2, 3, 4, 5, 6};
+
+    algo.benchmarkSubsetSum(arr1, 5);   // subsets that sum to 5
+    algo.benchmarkSubsetSum(arr2, 10);  // subsets that sum to 10
+    algo.benchmarkSubsetSum(arr3, 15);  // subsets that sum to 15
+    algo.benchmarkSubsetSum(arr4, 7);  // subsets that sum to 7
+    std::cout << "======================" << std::endl;
+    std::cout << "Recursive Subset Sum Count Testing END" << std::endl;
+    std::cout << "======================" << std::endl;
+
 
     // ===== BUCKET SORT TESTING =====
     std::cout << "\n\n2. BUCKET SORT TESTING" << std::endl;
