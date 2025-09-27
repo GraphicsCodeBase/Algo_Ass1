@@ -165,50 +165,51 @@ void GaleShapleyAlgorithm::runGaleShapleyAlgorithm() {
 
 // Helper to check for stability (no blocking pairs)
 bool GaleShapleyAlgorithm::isStable() {
-    // ... (Stability logic remains the same)
-    int blocking_pairs = 0;
+    std::cout << "\n=== STABILITY CHECK ===" << std::endl;
 
     for (const auto& platform : platforms) {
-        std::string current_match_r = "";
-        for (const auto& pair : current_matches) {
-            if (pair.second == platform) {
-                current_match_r = pair.first;
+        // Find current match for this platform
+        std::string current_restaurant = "";
+        for (const auto& match : current_matches) {
+            if (match.second == platform) {
+                current_restaurant = match.first;
                 break;
             }
         }
 
+        // Check all restaurants this platform prefers to current match
         for (const auto& restaurant : restaurants) {
-            std::string current_match_p = current_matches.at(restaurant);
+            if (restaurant == current_restaurant) continue; // Skip current match
 
-            // Platform P prefers R to its current partner (current_match_r)
-            bool P_prefers_R;
-            if (current_match_r.empty() || current_match_r == restaurant) {
-                P_prefers_R = false; // Already matched to R, or any match is not better than itself
+            std::string restaurants_current_partner = current_matches.at(restaurant);
+
+            // Does platform prefer this restaurant to current match?
+            bool platform_prefers = false;
+            if (current_restaurant.empty()) {
+                platform_prefers = true; // Unmatched platform prefers any restaurant
             }
             else {
-                int R_rank = platform_ranks[platform][restaurant];
-                int current_R_rank = platform_ranks[platform][current_match_r];
-                P_prefers_R = (R_rank < current_R_rank);
+                int current_rank = platform_ranks[platform][current_restaurant];
+                int other_rank = platform_ranks[platform][restaurant];
+                platform_prefers = (other_rank < current_rank); // Lower rank = better
             }
 
-            // Restaurant R prefers P to its current partner (current_match_p)
-            bool R_prefers_P;
-            if (current_match_p.empty() || current_match_p == platform) {
-                R_prefers_P = false; // Already matched to P, or any match is not better than itself
-            }
-            else {
-                int P_rank = restaurant_ranks[restaurant][platform];
-                int current_P_rank = restaurant_ranks[restaurant][current_match_p];
-                R_prefers_P = (P_rank < current_P_rank);
-            }
+            // Does restaurant prefer this platform to current partner?
+            bool restaurant_prefers = false;
+            int platform_rank = restaurant_ranks[restaurant][platform];
+            int current_partner_rank = restaurant_ranks[restaurant][restaurants_current_partner];
+            restaurant_prefers = (platform_rank < current_partner_rank);
 
-            if (P_prefers_R && R_prefers_P) {
-                blocking_pairs++;
+            if (platform_prefers && restaurant_prefers) {
+                std::cout << "BLOCKING PAIR FOUND: " << platform
+                    << " and " << restaurant << " would both prefer each other!" << std::endl;
+                return false;
             }
         }
     }
 
-    return blocking_pairs == 0;
+    std::cout << "No blocking pairs found - matching is STABLE!" << std::endl;
+    return true;
 }
 
 // Setters for test manipulation (no changes needed)

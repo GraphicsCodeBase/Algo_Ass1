@@ -99,10 +99,22 @@ TEST_F(AlgoTest, Case_02_High_Conflict_Swap) {
 
 // Scenario 3: All Platforms Agree - Change all platforms' top choice to ChiliCrab
 TEST_F(AlgoTest, Case_03_Platforms_Agree_ChiliCrab) {
-    for (const auto& p : algo.getPlatforms()) {
-        // Set ChiliCrab to rank 1, and the original rank 1 to rank 2
-        algo.swapPlatformPreferences(p, "ChiliCrab_Marina", algo.getPlatforms()[0]);
-    }
+    // Make ChiliCrab everyone's #1 choice by swapping with their current #1
+
+    // GrabFood already has ChiliCrab as #1, skip
+
+    // Foodpanda: swap ChiliCrab (rank 2) with PastaExpress (rank 1)
+    algo.swapPlatformPreferences("Foodpanda", "ChiliCrab_Marina", "PastaExpress_Orchard");
+
+    // Deliveroo: swap ChiliCrab (rank 3) with LaksaKing (rank 1)  
+    algo.swapPlatformPreferences("Deliveroo", "ChiliCrab_Marina", "LaksaKing_Katong");
+
+    // WhyQ: swap ChiliCrab (rank 4) with ChickenRice (rank 1)
+    algo.swapPlatformPreferences("WhyQ", "ChiliCrab_Marina", "ChickenRice_Bugis");
+
+    // Oddle: swap ChiliCrab (rank 5) with BakKutTeh (rank 1)
+    algo.swapPlatformPreferences("Oddle", "ChiliCrab_Marina", "BakKutTeh_Chinatown");
+
     int matches = executeAndReport("Case_03_Platforms_Agree_ChiliCrab");
     ASSERT_EQ(matches, EXPECTED_MATCHES) << "Test failed: Consensus matching failure.";
     ASSERT_TRUE(algo.isStable()) << "Test failed: Matching is not stable.";
@@ -140,21 +152,26 @@ TEST_F(AlgoTest, Case_06_Simple_Rotation_Cycle) {
 
 // Scenario 7: All Restaurants Prefer One Platform - Deliveroo becomes the favorite
 TEST_F(AlgoTest, Case_07_Receiver_Consensus_Deliveroo) {
-    // Deliveroo's rank is 1 for all restaurants
-    for (const auto& r : algo.getRestaurants()) {
-        std::string current_best = "";
-        // Find current best partner for restaurant r
-        for (const auto& p : algo.getPlatforms()) {
-            if (algo.getRestaurantRank(r, p) == 1) {
-                current_best = p;
-                break;
-            }
-        }
-        if (!current_best.empty() && current_best != "Deliveroo") {
-            // Swap Deliveroo (rank 3) with current best (rank 1)
-            algo.swapRestaurantPreferences(r, "Deliveroo", current_best);
-        }
-    }
+    // Make Deliveroo rank 1 for all restaurants by swapping with their current #1
+
+    // PastaExpress: Deliveroo (rank 4) <-> current #1 (Deliveroo is rank 1, so swap with rank 4)
+    // Actually, let's be more explicit about the swaps:
+
+    // PastaExpress currently: Deliveroo=1, GrabFood=2, Foodpanda=3, Oddle=4, WhyQ=5
+    // Already has Deliveroo as #1 - no change needed
+
+    // ChiliCrab currently: GrabFood=1, Foodpanda=2, Deliveroo=3, WhyQ=4, Oddle=5
+    algo.swapRestaurantPreferences("ChiliCrab_Marina", "Deliveroo", "GrabFood");
+
+    // BakKutTeh currently: WhyQ=1, Oddle=2, GrabFood=3, Foodpanda=4, Deliveroo=5
+    algo.swapRestaurantPreferences("BakKutTeh_Chinatown", "Deliveroo", "WhyQ");
+
+    // ChickenRice currently: Foodpanda=1, GrabFood=2, WhyQ=3, Deliveroo=4, Oddle=5
+    algo.swapRestaurantPreferences("ChickenRice_Bugis", "Deliveroo", "Foodpanda");
+
+    // LaksaKing currently: GrabFood=1, Deliveroo=2, Foodpanda=3, WhyQ=4, Oddle=5
+    algo.swapRestaurantPreferences("LaksaKing_Katong", "Deliveroo", "GrabFood");
+
     int matches = executeAndReport("Case_07_Receiver_Consensus_Deliveroo");
     ASSERT_EQ(matches, EXPECTED_MATCHES) << "Test failed: Receiver consensus failure.";
     ASSERT_TRUE(algo.isStable()) << "Test failed: Matching is not stable.";
@@ -182,11 +199,19 @@ TEST_F(AlgoTest, Case_09_First_Choice_Success) {
     ASSERT_TRUE(algo.isStable()) << "Test failed: Matching is not stable.";
 }
 
-// Scenario 10: Restaurant First Choice Failure - Test the rejection mechanism
+// Scenario 10: Restaurant Rejection Test - Force rejections and re-proposals
 TEST_F(AlgoTest, Case_10_Restaurant_Rejection_Test) {
-    // PastaExpress's top choice: Deliveroo
-    // Make Deliveroo's top choice NOT PastaExpress
-    algo.swapPlatformPreferences("Deliveroo", "LaksaKing_Katong", "ChiliCrab_Marina"); // Deliveroo top is ChiliCrab
+    // Create a scenario where restaurants will reject initial proposals
+    // and platforms must propose multiple times
+
+    // Make ChiliCrab reject GrabFood's proposal by preferring everyone else more
+    algo.swapRestaurantPreferences("ChiliCrab_Marina", "GrabFood", "Oddle"); // GrabFood becomes last choice
+
+    // Make PastaExpress reject Foodpanda by preferring others
+    algo.swapRestaurantPreferences("PastaExpress_Orchard", "Foodpanda", "WhyQ"); // Foodpanda becomes worse
+
+    // Force Deliveroo to propose to someone who will initially reject them
+    algo.swapPlatformPreferences("Deliveroo", "LaksaKing_Katong", "ChiliCrab_Marina"); // Deliveroo tries ChiliCrab first
 
     int matches = executeAndReport("Case_10_Restaurant_Rejection_Test");
     ASSERT_EQ(matches, EXPECTED_MATCHES) << "Test failed: Rejection test failure.";
