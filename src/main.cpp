@@ -2,6 +2,7 @@
 #include <string>
 #include "algo.hpp"
 #include "bucket_sort.hpp"
+#include "transport.hpp"
 //file path to the txt files.
 std::string random_station_file = "../../src/randomStations.txt";
 std::string thousand_numbers_file = "../../src/thousand.txt";
@@ -145,6 +146,37 @@ int main() {
     bucketSorter.benchmark(20);  // Run 20 iterations for benchmarking
 
     std::cout << "\n=== TESTING COMPLETE ===" << std::endl;
+
+    std::cout << std::endl;
+    std::cout << "==============================" << std::endl;
+	std::cout << "TRANSPORT NETWORK OPTIMIZATION" << std::endl;
+	std::cout << "==============================" << std::endl;
+
+    std::vector<int> test_sizes = { 4, 8, 16 };
+
+    for (int size : test_sizes) {
+        std::cout << "Network size: " << size << "x" << size << std::endl;
+
+        SingaporeTransportOptimizer optimizer(size);
+        auto network = SingaporeTransportOptimizer::generateNetwork(size);
+
+        auto start = std::chrono::high_resolution_clock::now();
+        int result = optimizer.optimizeTransport(network);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        std::cout << "Optimization result: " << result << std::endl;
+        std::cout << "Execution time: " << duration.count() << " microseconds\n" << std::endl;
+    }
+
+    // Complexity analysis
+    SingaporeTransportOptimizer analyzer(16);
+    analyzer.analyzeComplexity();
+
+    std::cout << "==================================" << std::endl;
+    std::cout << "TRANSPORT NETWORK OPTIMIZATION END" << std::endl;
+    std::cout << "==================================" << std::endl;
 
     return 0;
 }

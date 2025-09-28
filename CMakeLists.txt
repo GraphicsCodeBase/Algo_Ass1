@@ -7,7 +7,9 @@ set(CMAKE_CXX_STANDARD 17)
 # Force MSVC runtime to /MD or /MDd
 # -----------------------
 # This makes sure all targets (your code + gtest) agree on the runtime library
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
 
 # -----------------------
 # Fetch GoogleTest
@@ -27,35 +29,36 @@ FetchContent_MakeAvailable(googletest)
 add_library(algo
     src/algo.cpp
     src/algo.hpp
- "src/bucket_sort.cpp")
+    src/bucket_sort.cpp
+    src/bucket_sort.hpp
+    src/transport.cpp
+    src/transport.cpp)
 
 # -----------------------
 # Main executable
 # -----------------------
-add_executable(main
-    src/main.cpp
-    src/algo.cpp
-    # any other source files needed for the main program
- "src/bucket_sort.cpp" )
+add_executable(main src/main.cpp)
 target_link_libraries(main PRIVATE algo)
 
 # -----------------------
 # Test executable
 # -----------------------
 
-# Get all test files
-file(GLOB TEST_SOURCES "test/*.cpp")
-
-# Create test executable
 add_executable(runTests
     ${SOURCES}
-    ${TEST_SOURCES}
- "src/bucket_sort.cpp")
+    test/test.cpp
+    test/bucket_sort_test.cpp)
+target_link_libraries(runTests PRIVATE gtest_main gtest algo) # Link GoogleTest library
 
-# Link GoogleTest library
-target_link_libraries(runTests PRIVATE algo gtest_main)
+ add_executable(transportTests 
+    test/transport_test.cpp
+    src/transport.cpp
+    src/transport.hpp)
+target_link_libraries(transportTests PRIVATE gtest_main gtest algo)
+
 
 # Enable testing and discover tests
 include(GoogleTest)
 enable_testing()
 gtest_discover_tests(runTests PROPERTIES TIMEOUT 10)
+gtest_discover_tests(transportTests PROPERTIES TIMEOUT 10)
