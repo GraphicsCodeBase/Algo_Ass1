@@ -37,25 +37,10 @@ add_executable(main
     src/algo.cpp
     # any other source files needed for the main program
 )
-target_link_libraries(main PRIVATE algo)
+target_link_libraries(main PRIVATE algo gtest_main)
 
-# -----------------------
-# Test executable
-# -----------------------
-
-# Get all test files
-file(GLOB TEST_SOURCES "test/*.cpp")
-
-# Create test executable
-add_executable(runTests
-    ${SOURCES}
-    ${TEST_SOURCES}
-)
-
-# Link GoogleTest library
-target_link_libraries(runTests PRIVATE algo gtest_main)
 
 # Enable testing and discover tests
 include(GoogleTest)
 enable_testing()
-gtest_discover_tests(runTests PROPERTIES TIMEOUT 10)
+gtest_discover_tests(main PROPERTIES TIMEOUT 10)
